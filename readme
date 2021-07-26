@@ -1,0 +1,25 @@
+
+VARIABLE SCOPES
+Variables are defined (variables.tf) and assigned (terraform.tfvars) in component root directory.
+In addition, the following scopes can be used (values will override the root directory).
+
+# GLOBAL                              -var-file=./../g.tfvars
+# COMPONENT-ENVIRONMENT-REGION        -var-file=./$TFENV/$TFREGION/cer.tfvars
+# COMPONENT-ENVIRONMENT               -var-file=./$TFENV/ce.tfvars
+# ENVIRONMENT                         -var-file=./../vars/envs/$TFENV/e.tfvars
+# REGION                              -var-file=./../vars/regions/$TFREGION/r.tfvars
+
+
+SETUP STEPS
+
+export TFENV=dev
+export TFREGION=eu-frankfurt-1
+
+vi ~/.bashrc
+######Add these lines
+alias tinit="terraform init -var-file=./../g.tfvars -var-file=./$TFENV/$TFREGION/cer.tfvars -var-file=./$TFENV/ce.tfvars -var-file=./../vars/envs/$TFENV/e.tfvars -var-file=./../vars/regions/$TFREGION/r.tfvars"
+alias tplan="terraform plan -var-file=./../g.tfvars -var-file=./$TFENV/$TFREGION/cer.tfvars -var-file=./$TFENV/ce.tfvars -var-file=./../vars/envs/$TFENV/e.tfvars -var-file=./../vars/regions/$TFREGION/r.tfvars"
+
+source ~/.bashrc
+
+

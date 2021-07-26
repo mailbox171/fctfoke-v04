@@ -1,0 +1,7 @@
+.terra*
+sec.auto.tfvars
+*.auto.*
+terraform.tfstate*
+kubeconfig
+notes.txt
+

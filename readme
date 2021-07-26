@@ -23,3 +23,9 @@ alias tplan="terraform plan -var-file=./../g.tfvars -var-file=./$TFENV/$TFREGION
 source ~/.bashrc
 
 
+
+GIT
+git add .
+git commit -m "all1"
+git push  origin master
+

@@ -1,3 +1,4 @@
+.terra*
 sec.auto.tfvars
 *.auto.*
 terraform.tfstate*

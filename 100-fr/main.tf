@@ -2,6 +2,9 @@ module "oke" {
   source  = "oracle-terraform-modules/oke/oci"
   version = "3.2.0"
 
+  #KUBERNETES VERSION
+  kubernetes_version=var.kubernetes_version
+
   # Identity and access
   api_fingerprint      = var.api_fingerprint
   api_private_key_path = var.api_private_key_path

@@ -196,7 +196,7 @@ cluster_access = "public"
 cluster_access_source = "0.0.0.0/0"
 
 #cluster_name = "oke"
-cluster_name = "Face Recognition K8s Cluster"
+cluster_name = "FR K8s Cluster"
 
 
 check_node_active = "none"

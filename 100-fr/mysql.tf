@@ -23,8 +23,8 @@ ingress_security_rules {
       # Get protocol numbers from https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml TCP is 6
       protocol = "6"
       tcp_options { 
-          min = 22
-          max = 22
+          min = 3000
+          max = 39999
       }
   }
 }
@@ -33,6 +33,7 @@ ingress_security_rules {
 
 ############# SUBNET ############################
 resource "oci_core_subnet" "test_subnet" {
+  display_name = "subnet-MySQL"
   cidr_block     = "10.0.3.0/24"
   #compartment_id = var.compartment_ocid
   compartment_id = var.compartment_id

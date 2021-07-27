@@ -1,6 +1,6 @@
 compartment_id = "ocid1.compartment.oc1..aaaaaaaawb5bs2tee5hxwyor7evurum3voo6eq5ub73a3fpxvuv4q5zmckra"
 
-vcn_name = "eu-framkfurt-1-dev-face-recognition-k8s-vcn" 
+vcn_name = "eu-framkfurt-1-dev-fr-k8s-vcn" 
 
 node_pools = {
   #np1 = { shape = "VM.Standard.E3.Flex", ocpus = 2, memory = 20, node_pool_size = 2, boot_volume_size = 150 }

@@ -1,0 +1,17 @@
+
+####### MYSQL FROM OPERATOR - CREATE DB "POOLS"
+ssh -o StrictHostKeyChecking=no  -i ~/keys/ssh-key-2021-07-01.key -J opc@130.61.234.122 opc@10.0.0.6
+sudo yum install mysql-shell
+#mysqlsh Username@IPAddressOfMySQLDBSystemEndpoint
+mysqlsh adminUser@10.0.3.8
+BEstrO0ng_#11
+\sql CREATE DATABASE polls;
+
+Query OK, 1 row affected (0.0046 sec)
+ MySQL  10.0.3.8:3306 ssl  JS > 
+
+\quit
+exit
+
+
+--- end -----

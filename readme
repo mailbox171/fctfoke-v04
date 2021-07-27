@@ -56,7 +56,7 @@ ssh_to_operator = "ssh -i ~/keys/ssh-key-2021-07-01.key -J opc@xxx.yyy.227.241 o
 
 
 SSH TO OPERATOR
-ssh_to_operator = "ssh o StrictHostKeyChecking=no  -i ~/keys/ssh-key-2021-07-01.key -J opc@130.61.227.241 opc@10.0.0.6"
+ssh_to_operator = "ssh -o StrictHostKeyChecking=no  -i ~/keys/ssh-key-2021-07-01.key -J opc@130.61.227.241 opc@10.0.0.6"
 (..)
 Are you sure you want to continue connecting (yes/no)? yes
 
@@ -81,8 +81,46 @@ Query OK, 1 row affected (0.0038 sec)
 
 
 
-
 CLONE REPO ON OPERATOR
-git clone https://github.com/mailbox171/fctfoke-v01.git/k8s
+git clone https://github.com/mailbox171/fctfoke-v01.git/
+
+
+
+GO TO K8S WORDPRESS MANIFEST FOLDER 
+cd fctfoke-v01/100-fr/k8s/wp/
+
+APPLY MANIFEST .yaml FILES
+[opc@dev-operator wp]$ kubectl apply -f svc-mysql.yaml 
+service/external-mysql-service created
+endpoints/external-mysql-service created
+
+[opc@dev-operator wp]$ kubectl apply -f wp.yaml 
+service/wordpress created
+persistentvolumeclaim/wp-pv-claim created
+deployment.apps/wordpress created
+
+
+
+
+CHECK SERVICES, WAIT FOR EXTERNAL ADDRESS (may be 'pending' for a while)
+[opc@dev-operator wp]$ kubectl get svc
+NAME                     TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)        AGE
+external-mysql-service   ClusterIP      10.96.104.164   <none>           3306/TCP       81s
+kubernetes               ClusterIP      10.96.0.1       <none>           443/TCP        29m
+wordpress                LoadBalancer   10.96.192.55    129.159.243.47   80:30952/TCP   40s
+
+
+
+
+GO TO ADDRESS, IN ANY INTERNET BROWSER
+http://129.159.243.47
+
+WordPress website should be reached
+
+
+
+
+
+
 
 

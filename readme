@@ -1,13 +1,17 @@
 
 VARIABLE SCOPES
-Variables are defined (variables.tf) and assigned (terraform.tfvars) in component root directory.
-In addition, the following scopes can be used (values will override the root directory).
+Roughly each VCN is a component.
+Variables for each component are generally defined (variables.tf) and assigned (terraform.tfvars) in the component root directory.
+
+In addition, the following scopes can be used (values will OVERRIDE what is in the root directory).
 
 # GLOBAL                              -var-file=./../g.tfvars
 # COMPONENT-ENVIRONMENT-REGION        -var-file=./$TFENV/$TFREGION/cer.tfvars
 # COMPONENT-ENVIRONMENT               -var-file=./$TFENV/ce.tfvars
 # ENVIRONMENT                         -var-file=./../vars/envs/$TFENV/e.tfvars
 # REGION                              -var-file=./../vars/regions/$TFREGION/r.tfvars
+
+
 
 
 SETUP STEPS
@@ -28,6 +32,8 @@ source ~/.bashrc
 
 
 git clone https://github.com/mailbox171/fctfoke-v01.git
+
+
 
 ---------------------------------- MODULE 100 FR ---------------------------------------------------------
 

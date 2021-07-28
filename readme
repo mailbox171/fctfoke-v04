@@ -4,6 +4,12 @@ COMPONENTS
 
 
 
+LAYERED ARCHITECTURE, PLEASE CREATE AND DESTROY IN REVERSE ORDER
+Creation    100-fr   -->  200-core 
+Destroy     200-core -->  100-fr     
+
+
+
 VARIABLE SCOPES
 Roughly each VCN is a component.
 Variables for each component are generally defined (variables.tf) and assigned (terraform.tfvars) in the component root directory.
@@ -90,8 +96,8 @@ Query OK, 1 row affected (0.0038 sec)
 
 
 
-CLONE REPO ON OPERATOR
-git clone https://github.com/mailbox171/fctfoke-v01.git/
+CLONE THIS REPO ON OPERATOR
+git clone https://github.com/mailbox171/fctfoke-v02
 
 
 
@@ -129,7 +135,9 @@ WordPress website should be reached
 
 REMINDER
 When destroyng this component, delete load balancer in k8s, before terraform destroy.
-If you frget, you can also delete the LB using console
+If you frget, you can also delete the LB using OCI console
+
+[opc@dev-operator wp]$ kubectl kubectl delete service wordpress 
 
 
 

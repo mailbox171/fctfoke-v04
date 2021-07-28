@@ -63,6 +63,8 @@ ssh_to_operator = "ssh -i ~/keys/ssh-key-2021-07-01.key -J opc@xxx.yyy.227.241 o
 
 
 SSH TO OPERATOR
+Insert "-o StrictHostKeyChecking=no" option 
+
 ssh_to_operator = "ssh -o StrictHostKeyChecking=no  -i ~/keys/ssh-key-2021-07-01.key -J opc@130.61.227.241 opc@10.0.0.6"
 (..)
 Are you sure you want to continue connecting (yes/no)? yes

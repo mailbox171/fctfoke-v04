@@ -1,3 +1,13 @@
+#added variables
+variable "fr-dir" {
+  description = "rel path to fr"
+  type        = string
+}
+variable "core-dir" {
+  description = "rel path to core"
+  type        = string
+}
+
 
 
 
@@ -632,19 +642,3 @@ variable "tags" {
   description = "Tags to apply to different resources."
   type        = map(any)
 }
-
-
-
-
-# REFERENCE TO OTHER COMPONENTS
-#added variables
-variable "fr-dir" {
-  description = "rel path to fr"
-  type        = string
-}
-variable "core-dir" {
-  description = "rel path to core"
-  type        = string
-}
-
-

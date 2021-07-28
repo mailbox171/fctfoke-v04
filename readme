@@ -29,6 +29,8 @@ source ~/.bashrc
 
 git clone https://github.com/mailbox171/fctfoke-v01.git
 
+---------------------------------- MODULE 100 FR ---------------------------------------------------------
+
 cd 100-fr
 
 edit sec.auto.tfvars
@@ -116,6 +118,54 @@ GO TO ADDRESS, IN ANY INTERNET BROWSER
 http://129.159.243.47
 
 WordPress website should be reached
+
+
+REMINDER
+When destroyng this component, delete load balancer in k8s, before terraform destroy.
+If you frget, you can also delete the LB using console
+
+
+
+---------------------------------- MODULE 200 CORE  ---------------------------------------------------------
+
+cd ..
+cd 200-core
+
+edit sec.auto.tfvars
+(set variables values)
+
+
+
+# not necessary, if already done
+export TFENV=dev
+export TFREGION=eu-frankfurt-1
+
+source  ~/.bashrc   # ALWAYS!
+
+
+
+
+
+tinit
+tplan
+tapply
+
+
+
+------------------------ CLEAN UP -------------------------------
+
+>>>> DESTROY IN REVERSE ORDER
+200-core
+100-fr 
+
+
+
+cd 200-core
+tdestroy
+
+cd ../100-fr
+tdestroy
+
 
 
 

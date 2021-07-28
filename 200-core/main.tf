@@ -34,7 +34,7 @@ module "oke" {
 
 
   #OPERATOR ENABLED 
-  operator_enabled  = true
+  operator_enabled  = false
   operator_instance_principal = true 
   operator_shape    = var.operator_shape
   operator_timezone = var.operator_timezone

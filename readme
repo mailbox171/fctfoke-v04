@@ -1,3 +1,8 @@
+COMPONENTS
+100-fr
+200-core 
+
+
 
 VARIABLE SCOPES
 Roughly each VCN is a component.

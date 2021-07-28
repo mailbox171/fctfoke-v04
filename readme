@@ -34,12 +34,6 @@ source ~/.bashrc
 
 
 
-
-
-git clone https://github.com/mailbox171/fctfoke-v01.git
-
-
-
 ---------------------------------- MODULE 100 FR ---------------------------------------------------------
 
 cd 100-fr

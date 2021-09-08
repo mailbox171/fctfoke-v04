@@ -373,7 +373,11 @@ variable "node_pools" {
   #np1 = { shape = "VM.Standard.E3.Flex", ocpus = 2, memory = 20, node_pool_size = 2, boot_volume_size = 150 }
   #np2 = { shape = "VM.Standard.E2.2", node_pool_size = 2, boot_volume_size = 150, label = { app = "application", name = "test" } }
   #np3 = { shape = "VM.Standard.E2.2", node_pool_size = 1 }
-  np1 = { shape = "VM.Standard.E3.Flex", ocpus = 2, memory = 20, node_pool_size = 1, boot_volume_size = 150 }
+  #np1 = { shape = "VM.Standard.E3.Flex", ocpus = 2, memory = 20, node_pool_size = 1, boot_volume_size = 150 }
+  
+  np1 = { shape = "VM.Standard.E3.Flex", ocpus = 2, memory = 20, node_pool_size = 3, boot_volume_size = 150 }
+
+
   }
   description = "Tuple of node pools. Each key maps to a node pool. Each value is a tuple of shape (string),ocpus(number) , node_pool_size(number) and boot_volume_size(number)"
   type        = any

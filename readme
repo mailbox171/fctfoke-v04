@@ -141,6 +141,138 @@ If you frget, you can also delete the LB using OCI console
 
 
 
+
+-------------------------------------------------------------------------------------------
+Set-up NGINX Ingress Controller
+-------------------------------------------------------------------------------------------
+
+Ingress Controller 
+The ingress controller comprises:
+
+    An ingress controller deployment called nginx-ingress-controller. The deployment deploys an image that contains the binary for the ingress controller and Nginx. The binary manipulates and reloads the /etc/nginx/nginx.conf configuration file when an ingress is created in Kubernetes. Nginx upstreams point to services that match specified selectors.
+    An ingress controller service called ingress-nginx. The service exposes the ingress controller deployment as a LoadBalancer type service. Because Container Engine for Kubernetes uses an Oracle Cloud Infrastructure integration/cloud-provider, a load balancer will be dynamically created with the correct nodes configured as a backend set.
+
+Backend Components
+The hello-world backend comprises:
+
+    A backend deployment called docker-hello-world. The deployment handles default routes for health checks and 404 responses. This is done by using a stock hello-world image that serves the minimum required routes for a default backend.
+    A backend service called docker-hello-world-svc.The service exposes the backend deployment for consumption by the ingress controller deployment.
+
+
+
+Setting Up the Example Ingress Controller
+1. If you haven't already done so, follow the steps to set up the cluster's kubeconfig configuration file
+                 export KUBECONFIG=<repo-root>/100-fr/generated/kubeconfig
+2. If your Oracle Cloud Infrastructure user is a tenancy administrator, skip the next step
+3. If your Oracle Cloud Infrastructure user is not a tenancy administrator, in a terminal window, grant the user the Kubernetes RBAC cluster-admin clusterrole on the cluster by entering:
+                 kubectl create clusterrolebinding <my-cluster-admin-binding> --clusterrole=cluster-admin --user=<user-OCID>
+where:
+
+    <my-cluster-admin-binding> is a string of your choice to be used as the name for the binding between the user and the Kubernetes RBAC cluster-admin clusterrole. For example, jdoe_clst_adm
+    <user-OCID> is the user's OCID (obtained from the Console ). For example, ocid1.user.oc1..aaaaa...zutq (abbreviated for readability).
+
+
+Creating the Service Account, and the Ingress Controller
+1. Run the following command to create the nginx-ingress-controller ingress controller deployment, along with the Kubernetes RBAC roles and bindings:
+                kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.0/deploy/static/provider/cloud/deploy.yaml
+
+
+
+To check if the ingress controller pods have started, run the following command:
+
+kubectl get pods -n ingress-nginx \
+  -l app.kubernetes.io/name=ingress-nginx --watch
+
+
+
+
+To detect which version of the ingress controller is running, exec into the pod and run nginx-ingress-controller --version.
+
+POD_NAMESPACE=ingress-nginx
+POD_NAME=$(kubectl get pods -n $POD_NAMESPACE -l app.kubernetes.io/name=ingress-nginx --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')
+
+kubectl exec -it $POD_NAME -n $POD_NAMESPACE -- /nginx-ingress-controller --version
+
+
+
+
+
+ 
+2. Create the ingress-nginx ingress controller service by running the following command:
+                cd <repo-root>/100-fr/k8s/ingress
+                kubectl apply -f cloud-generic.yaml
+
+
+
+Verifying the ingress-nginx Ingress Controller Service is Running as a Load Balancer Service. View the list of running services by entering:
+               kubectl get svc -n ingress-nginx   
+The output from the above command shows the EXTERNAL-IP for the ingress-nginx Service.
+
+
+
+
+Creating the TLS Secret.
+A TLS secret is used for SSL termination on the ingress controller. Output a new key to a file. For example, by entering:
+                openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=nginxsvc/O=nginxsvc"
+
+Create the TLS secret by entering: 
+                kubectl create secret tls tls-secret --key tls.key --cert tls.crt
+
+
+
+Setting Up the Example Backend
+
+In this section, you define a hello-world backend service and deployment.
+Create the new hello-world deployment and service on nodes in the cluster by running the following command:
+                kubectl create -f hello-world-ingress.yaml
+
+
+Using the Example Ingress Controller to Access the Example Backend
+In this section you create an ingress to access the backend using the ingress controller.
+                kubectl create -f ingress.yaml
+
+
+
+Verifying that the Example Components are Working as Expected.
+To confirm the ingress-nginx service is running as a LoadBalancer service, obtain its external IP address by entering:
+                kubectl get svc --all-namespaces
+
+
+Sending cURL Requests to the Load Balancer
+Use the external IP address of the ingress-nginx service (for example, 129.146.214.219) to open a browser, or otherwise curl an http request by entering:
+                curl --trace -  http://<EXTERNALIP>
+
+
+---------------------------------------------------------------------------------------------------------------
+One more Ingress example (from https://kubernetes.io/docs/tasks/access-application-cluster/ingress-minikube/ )
+
+Create a Deployment using the following command:
+                kubectl create deployment web --image=gcr.io/google-samples/hello-app:1.0
+
+Expose as service
+                kubectl expose deployment web --type=NodePort --port=8080
+
+Create ingress resource
+                kubectl apply -f example-ingress.yaml
+
+Sending cURL Requests to the Load Balancer (Hello world)
+Use the same external IP address (adding the path /helloworld) of the ingress-nginx service (for example, 129.146.214.219) to open a browser, or otherwise curl an http request by entering:
+                curl --trace -  http://<EXTERNALIP>/helloworld
+
+Check the / path still works (Hello webhook world)
+Use the external IP address of the ingress-nginx service (for example, 129.146.214.219) to open a browser, or otherwise curl an http request by entering:
+                curl --trace -  http://<EXTERNALIP>
+
+
+----------------------------------------------------------------
+
+
+
+
+
+
+
+
 ---------------------------------- MODULE 200 CORE  ---------------------------------------------------------
 
 cd ..

@@ -1,16 +1,24 @@
-COMPONENTS
+---------------------------------------------------------------------------
+FC ORACLE OCI OKE Sample Architecture
+---------------------------------------------------------------------------
+
+
+---------------------------------------------------------------------------
+Setting up with Terraform
+---------------------------------------------------------------------------
+
+From Terraform point of view, we have two COMPONENTS
 100-fr
 200-core 
 
-
-
-LAYERED ARCHITECTURE, PLEASE CREATE AND DESTROY IN REVERSE ORDER
-Creation    100-fr   -->  200-core 
-Destroy     200-core -->  100-fr     
+The are arrenged in a LAYERED ARCHITECTURE, PLEASE CREATE AND DESTROY IN REVERSE ORDER
+   Create      100-fr   -->  200-core 
+   Destroy     200-core -->  100-fr     
 
 
 
-VARIABLE SCOPES
+Terraform VARIABLE SCOPES
+-------------------------
 Roughly each VCN is a component.
 Variables for each component are generally defined (variables.tf) and assigned (terraform.tfvars) in the component root directory.
 
@@ -26,6 +34,7 @@ In addition, the following scopes can be used (values will OVERRIDE what is in t
 
 
 SETUP STEPS
+-----------
 
 export TFENV=dev
 export TFREGION=eu-frankfurt-1
@@ -39,8 +48,8 @@ alias tapply="terraform apply  -var-file=./../g.tfvars -var-file=./$TFENV/$TFREG
 source ~/.bashrc
 
 
-
----------------------------------- MODULE 100 FR ---------------------------------------------------------
+MODULE 100 FR SETUP - RUN WORDPRESS AGAINST MYSQL
+-------------------------------------------------
 
 cd 100-fr
 
@@ -97,11 +106,11 @@ Query OK, 1 row affected (0.0038 sec)
 
 
 CLONE THIS REPO ON OPERATOR
-git clone https://github.com/mailbox171/fctfoke-v02
+git clone https://github.com/mailbox171/<repo-name>
 
 
 
-GO TO K8S WORDPRESS MANIFEST FOLDER 
+GO TO K8S WORDPRESS K8S MANIFEST FOLDER 
 cd fctfoke-v01/100-fr/k8s/wp/
 
 APPLY MANIFEST .yaml FILES
@@ -142,76 +151,60 @@ If you frget, you can also delete the LB using OCI console
 
 
 
--------------------------------------------------------------------------------------------
+
 Set-up NGINX Ingress Controller
--------------------------------------------------------------------------------------------
+-------------------------------
 
 Ingress Controller 
 The ingress controller comprises:
 
-    An ingress controller deployment called nginx-ingress-controller. The deployment deploys an image that contains the binary for the ingress controller and Nginx. The binary manipulates and reloads the /etc/nginx/nginx.conf configuration file when an ingress is created in Kubernetes. Nginx upstreams point to services that match specified selectors.
-    An ingress controller service called ingress-nginx. The service exposes the ingress controller deployment as a LoadBalancer type service. Because Container Engine for Kubernetes uses an Oracle Cloud Infrastructure integration/cloud-provider, a load balancer will be dynamically created with the correct nodes configured as a backend set.
+- An ingress controller deployment called nginx-ingress-controller. 
+  The deployment deploys an image that contains the binary for the ingress controller and Nginx. 
+  The binary manipulates and reloads the /etc/nginx/nginx.conf configuration file when an ingress is created in Kubernetes.
+  Nginx upstreams point to services that match specified selectors.
+- An ingress controller service called ingress-nginx. 
+  The service exposes the ingress controller deployment as a LoadBalancer type service. 
+  Because Container Engine for Kubernetes uses an Oracle Cloud Infrastructure integration/cloud-provider, 
+  a load balancer will be dynamically created with the correct nodes configured as a backend set.
 
 Backend Components
 The hello-world backend comprises:
 
-    A backend deployment called docker-hello-world. The deployment handles default routes for health checks and 404 responses. This is done by using a stock hello-world image that serves the minimum required routes for a default backend.
-    A backend service called docker-hello-world-svc.The service exposes the backend deployment for consumption by the ingress controller deployment.
+- A backend deployment called docker-hello-world. This is done by using a stock hello-world image that serves the minimum required routes for a default backend.
+- A backend service called docker-hello-world-svc.The service exposes the backend deployment for consumption by the ingress controller deployment.
 
 
 
 Setting Up the Example Ingress Controller
 1. If you haven't already done so, follow the steps to set up the cluster's kubeconfig configuration file
                  export KUBECONFIG=<repo-root>/100-fr/generated/kubeconfig
-2. If your Oracle Cloud Infrastructure user is a tenancy administrator, skip the next step
-3. If your Oracle Cloud Infrastructure user is not a tenancy administrator, in a terminal window, grant the user the Kubernetes RBAC cluster-admin clusterrole on the cluster by entering:
-                 kubectl create clusterrolebinding <my-cluster-admin-binding> --clusterrole=cluster-admin --user=<user-OCID>
-where:
-
-    <my-cluster-admin-binding> is a string of your choice to be used as the name for the binding between the user and the Kubernetes RBAC cluster-admin clusterrole. For example, jdoe_clst_adm
-    <user-OCID> is the user's OCID (obtained from the Console ). For example, ocid1.user.oc1..aaaaa...zutq (abbreviated for readability).
 
 
 Creating the Service Account, and the Ingress Controller
 1. Run the following command to create the nginx-ingress-controller ingress controller deployment, along with the Kubernetes RBAC roles and bindings:
-                kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.0/deploy/static/provider/cloud/deploy.yaml
-
-
+                 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.0/deploy/static/provider/cloud/deploy.yaml
 
 To check if the ingress controller pods have started, run the following command:
 
-kubectl get pods -n ingress-nginx \
-  -l app.kubernetes.io/name=ingress-nginx --watch
-
-
-
+                 kubectl get pods -n ingress-nginx \
+                      -l app.kubernetes.io/name=ingress-nginx --watch
 
 To detect which version of the ingress controller is running, exec into the pod and run nginx-ingress-controller --version.
 
-POD_NAMESPACE=ingress-nginx
-POD_NAME=$(kubectl get pods -n $POD_NAMESPACE -l app.kubernetes.io/name=ingress-nginx --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')
+                 POD_NAMESPACE=ingress-nginx
+                 POD_NAME=$(kubectl get pods -n $POD_NAMESPACE -l app.kubernetes.io/name=ingress-nginx --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')
+                 kubectl exec -it $POD_NAME -n $POD_NAMESPACE -- /nginx-ingress-controller --version
 
-kubectl exec -it $POD_NAME -n $POD_NAMESPACE -- /nginx-ingress-controller --version
-
-
-
-
-
- 
-2. Create the ingress-nginx ingress controller service by running the following command:
+Create the ingress-nginx ingress controller service by running the following command:
                 cd <repo-root>/100-fr/k8s/ingress
                 kubectl apply -f cloud-generic.yaml
 
-
-
-Verifying the ingress-nginx Ingress Controller Service is Running as a Load Balancer Service. View the list of running services by entering:
-               kubectl get svc -n ingress-nginx   
+Verify that the ingress-nginx Ingress Controller Service is Running as a Load Balancer Service. View the list of running services by entering:
+                kubectl get svc -n ingress-nginx   
 The output from the above command shows the EXTERNAL-IP for the ingress-nginx Service.
 
 
-
-
-Creating the TLS Secret.
+Creating a TLS Secret.
 A TLS secret is used for SSL termination on the ingress controller. Output a new key to a file. For example, by entering:
                 openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=nginxsvc/O=nginxsvc"
 
@@ -220,9 +213,7 @@ Create the TLS secret by entering:
 
 
 
-Setting Up the Example Backend
-
-In this section, you define a hello-world backend service and deployment.
+Setting Up the Example Backend. In this section, you define a hello-world backend service and deployment.
 Create the new hello-world deployment and service on nodes in the cluster by running the following command:
                 kubectl create -f hello-world-ingress.yaml
 
@@ -231,9 +222,7 @@ Using the Example Ingress Controller to Access the Example Backend
 In this section you create an ingress to access the backend using the ingress controller.
                 kubectl create -f ingress.yaml
 
-
-
-Verifying that the Example Components are Working as Expected.
+Verify that the Example Components are Working as Expected.
 To confirm the ingress-nginx service is running as a LoadBalancer service, obtain its external IP address by entering:
                 kubectl get svc --all-namespaces
 
@@ -243,8 +232,10 @@ Use the external IP address of the ingress-nginx service (for example, 129.146.2
                 curl --trace -  http://<EXTERNALIP>
 
 
----------------------------------------------------------------------------------------------------------------
-One more Ingress example (from https://kubernetes.io/docs/tasks/access-application-cluster/ingress-minikube/ )
+
+One more Ingress example
+------------------------
+(from https://kubernetes.io/docs/tasks/access-application-cluster/ingress-minikube/ )
 
 Create a Deployment using the following command:
                 kubectl create deployment web --image=gcr.io/google-samples/hello-app:1.0
@@ -264,9 +255,7 @@ Use the external IP address of the ingress-nginx service (for example, 129.146.2
                 curl --trace -  http://<EXTERNALIP>
 
 
-----------------------------------------------------------------
-
-
+ 
 
 
 
@@ -274,6 +263,8 @@ Use the external IP address of the ingress-nginx service (for example, 129.146.2
 
 
 ---------------------------------- MODULE 200 CORE  ---------------------------------------------------------
+These are the steps to create the second layer, with a different VCN, and Local Peering Gateway with the first,
+and its own OKE cluster
 
 cd ..
 cd 200-core
@@ -300,18 +291,22 @@ tapply
 
 
 ------------------------ CLEAN UP -------------------------------
-
->>>> DESTROY IN REVERSE ORDER
+-----------------------------------------------------------------
+>>>> PLEASE DESTROY IN REVERSE ORDER
 200-core
 100-fr 
 
 
+The steps to clean up are:
 
-cd 200-core
-tdestroy
+             Go to repo root directory
+             Repeat initial Terraform setup, if becessary (env variables and init script sourcing)
 
-cd ../100-fr
-tdestroy
+             cd 200-core
+             tdestroy
+
+             cd ../100-fr
+             tdestroy
 
 
 

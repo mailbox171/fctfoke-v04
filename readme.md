@@ -14,7 +14,7 @@ The main elements covered are:
 
 - OKE Node Doctor
 
-- Deployment of a sample WordPress app, with access to OCI MySqlService
+- Deployment of a sample WordPress app, with access to OCI MySql Service
 
 - Calico setup and sample NetworkPolicies
 
@@ -31,12 +31,17 @@ The main elements covered are:
 ### Components
 
 From Terraform point of view, we have two *components*
-  100-fr
-  200-core 
 
-The are arrenged in a LAYERED ARCHITECTURE, with 100-fr being the bottom layer
+   100-fr
+
+   200-core 
+
+They are arrenged in a LAYERED ARCHITECTURE, with 100-fr being the bottom layer
 Therefore, PLEASE CREATE AND DESTROY IN REVERSE ORDER
-   Create      100-fr   -->  200-core 
+
+
+   Create      100-fr   -->  200-core
+
    Destroy    200-core -->  100-fr     
 
 
@@ -60,11 +65,11 @@ COMPONENT-ENVIRONMENT         -var-file=./$TFENV/ce.tfvars
 ```
 
 ```
-ENVIRONMENT                    -var-file=./../vars/envs/$TFENV/e.tfvars
+ENVIRONMENT                   -var-file=./../vars/envs/$TFENV/e.tfvars
 ```
 
 ```
-REGION                          -var-file=./../vars/regions/$TFREGION/r.tfvars
+REGION                        -var-file=./../vars/regions/$TFREGION/r.tfvars
 ```
 
 
@@ -76,7 +81,14 @@ REGION                          -var-file=./../vars/regions/$TFREGION/r.tfvars
 ### Setup steps
 
 export TFENV=dev
+
 export TFREGION=eu-frankfurt-1
+
+
+
+Edit bashrc file
+
+
 
 ```
 vi ~/.bashrc
@@ -100,7 +112,8 @@ source ~/.bashrc
 
 ### Running Terraform
 
-cd <repo-root>
+cd  repo-root  // wherever is on your machine
+
 cd 100-fr
 
 
@@ -109,6 +122,7 @@ edit sec.auto.tfvars
 
 
 export TFENV=dev
+
 export TFREGION=eu-frankfurt-1
 
 source  ~/.bashrc   # ALWAYS source after updating env variables!
@@ -119,7 +133,11 @@ Run Terraform now.
 
 
 tinit
+
+
 tplan
+
+
 tapply
 
 Apply complete! Resources: 31 added, 0 changed, 0 destroyed.
@@ -128,6 +146,8 @@ Outputs:
 
 
 SAVE OUTPUT, REPLACE CURRENT TIME IN FILE NAME
+
+
 terraform output > tf-output-.txt
 
 (example: terraform output tf-output-202109100924.txt)
@@ -166,8 +186,12 @@ Are you sure you want to continue connecting (yes/no)? yes
 [opc@dev-operator ~]$ kubectl get nodes
 
 NAME           STATUS   ROLES   AGE   VERSION
+
 10.0.115.141   Ready    node    2d    v1.20.8
+
 10.0.119.225   Ready    node    2d    v1.20.8
+
+
 
 Make note of nodes IP ADRESSES
 
@@ -188,15 +212,19 @@ sudo /usr/local/bin/node-doctor.sh --check
 
 
 
+
+
 2. Gather system information in a bundle. If needed, My Oracle Support (MOS) provides instructions to upload the bundle to a support ticket.
 
 sudo /usr/local/bin/node-doctor.sh --generate
 
 
+
+
 Deploy WOPRPRESS connected to OCI MySQL Service
 --------------------------
 
-### CREATE SCHEMA WITHIN PROVISIONED MYSQL SERVICE DB
+### Create *polls* schema within MYSQL SERVICE DB
 
 sudo yum install mysql-shell #mysqlsh Username@IPAddressOfMySQLDBSystemEndpoint mysqlsh adminUser@10.0.3.8 BEstrO0ng_#11
 
@@ -227,6 +255,8 @@ cd fctfoke-v01/100-fr/k8s/wp/
 service/external-mysql-service created
 endpoints/external-mysql-service created
 
+
+
 [opc@dev-operator wp]$ kubectl apply -f wp.yaml 
 service/wordpress created
 persistentvolumeclaim/wp-pv-claim created
@@ -237,26 +267,40 @@ deployment.apps/wordpress created
 ### Test WORDPRESS
 
 CHECK SERVICES, WAIT FOR EXTERNAL ADDRESS (may be 'pending' for a while)
+
+
 [opc@dev-operator wp]$ kubectl get svc
 NAME                     TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)        AGE
+
+
 external-mysql-service   ClusterIP      10.96.104.164   <none>           3306/TCP       81s
+
 kubernetes               ClusterIP      10.96.0.1       <none>           443/TCP        29m
+
 wordpress                LoadBalancer   10.96.192.55    129.159.243.47   80:30952/TCP   40s
 
+
+
+
+
 GO TO ADDRESS, IN ANY INTERNET BROWSER
+
 http://129.159.243.47
 
-WordPress website should be reached
+WordPress website should be reached!
 
 
 
-REMINDER
+**REMINDER**
+
 When destroyng this component, delete load balancer in k8s using kubectl, before terraform destroy. 
 
 [opc@dev-operator wp]$ kubectl delete service wordpress 
 
 
 If you forget, you can also delete the LB using OCI console, then you need to run "terraform destroy" again, using "tdestroy" alias.
+
+
 
 
 SET UP NGINX Ingress Controller
@@ -322,9 +366,15 @@ The output from the above command shows the EXTERNAL-IP for the ingress-nginx Se
 
 
 A TLS secret is used for SSL termination on the ingress controller. Output a new key to a file. For example, by entering:
+
+
                 openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=nginxsvc/O=nginxsvc"
 
+
+
 Create the TLS secret by entering: 
+
+
                 kubectl create secret tls tls-secret --key tls.key --cert tls.crt
 
 
@@ -333,19 +383,35 @@ Create the TLS secret by entering:
 
 In this section, you define a hello-world backend service and deployment.
 Create the new hello-world deployment and service on nodes in the cluster by running the following command:
+
+
                 kubectl apply -f hello-world-ingress.yaml
+
+
 
 Using the Example Ingress Controller to Access the Example Backend
 In this section you create an ingress to access the backend using the ingress controller.
+
+
                 kubectl apply -f ingress-v1.yaml
+
+
 
 Verify that the Example Components are Working as Expected.
 To confirm the ingress-nginx service is running as a LoadBalancer service, obtain its external IP address by entering:
+
+
                 kubectl get svc --all-namespaces
+
+
 
 Sending cURL Requests to the Load Balancer
 Use the external IP address of the ingress-nginx service (for example, 129.146.214.219) to open a browser, or otherwise curl an http request by entering:
+
+
                 curl --trace -  http://<EXTERNALIP>
+
+
 
 
 One more Ingress example
@@ -354,21 +420,45 @@ One more Ingress example
 (from https://kubernetes.io/docs/tasks/access-application-cluster/ingress-minikube/ )
 
 Create a Deployment using the following command:
+
+
                 kubectl create deployment web --image=gcr.io/google-samples/hello-app:1.0
 
+
+
 Expose as service
+
+
                 kubectl expose deployment web --type=NodePort --port=8080
 
+
+
 Create ingress resource
+
+
                 kubectl apply -f example-ingress.yaml
 
+
+
 Sending cURL Requests to the Load Balancer (Hello world)
+
+
 Use the same external IP address (adding the path /helloworld) of the ingress-nginx service (for example, 129.146.214.219) to open a browser, or otherwise curl an http request by entering:
+
+
                 curl --trace -  http://<EXTERNALIP>/helloworld
 
+
+
 Check the / path still works (Hello webhook world)
+
+
 Use the external IP address of the ingress-nginx service (for example, 129.146.214.219) to open a browser, or otherwise curl an http request by entering:
+
+
                 curl --trace -  http://<EXTERNALIP>
+
+
 
 
 
@@ -387,35 +477,67 @@ In the Create WAF Policy dialog box, enter the fields as follows:
 
 
 Policy Name     fctfoke Policy
+
+
 Primary Domain     fctkoke.com
-Additional Domains     <Leave blank>
+
+
+Additional Domains     blank
+
+
 Origin Name     fctfoke Load Balancer
-URI             <EXTERNALIP>
+
+
+URI             EXTERNALIP
 
 
 
 Look in the policy web page, at the top, for a message like
-    Visit your DNS provider and add your CNAME fctfoke-com.o.waas.oci.oraclecloud.net to your domain's DNS configuration. Learn More
+
+
+    *Visit your DNS provider and add your CNAME fctfoke-com.o.waas.oci.oraclecloud.net to your domain's DNS configuration. Learn More*
+
+
 
 Make note of the CNAME
 
 Identify a (there may be several) network IP address for the CNAME.
 
 
-nslookup <CNAME>
+nslookup CNAME
 
 Example
+
+
     nslookup  fctfoke-com.o.waas.oci.oraclecloud.net
+
+
     Server:  fritz.box
+
+
     Address:  192.168.178.1
 
+
+
 Non-authoritative answer:
+
+
 Name:    eu-switzerland.inregion.waas.oci.oraclecloud.net
+
+
 Addresses:  192.29.61.119
+
+
             192.29.56.104
+
+
             192.29.61.248
+
+
 Aliases:  fctfoke-com.o.waas.oci.oraclecloud.net
           tm.inregion.waas.oci.oraclecloud.net
+
+
 
 
 A real production environment would require the correct setup for DNS. Here will just resove the name locally, just to test the WAF settings.
@@ -444,7 +566,11 @@ Wait 15 minutes
 
 
 Try to access your EXTERNALIP
+
+
     http://fctfoke.com/
+
+
 
 You shuold be prompted with a CAPTCHA, which means the WAF is active. 
 
@@ -456,26 +582,46 @@ These are the steps to create the second layer, with a different VCN, Local Peer
 
 
 cd ..
+
+
 cd 200-core
 
+
+
 edit sec.auto.tfvars
+
+
 (set variables values)
 
 
 
 #not necessary, if already done
 
+
+
 export TFENV=dev
+
+
 export TFREGION=eu-frankfurt-1
+
+
 
 source  ~/.bashrc   # ALWAYS!
 
 
 
+
+
 Run Terraform now.
 
+
+
 tinit
+
+
 tplan
+
+
 tapply
 
 
@@ -487,6 +633,8 @@ PLEASE DESTROY IN REVERSE ORDER
 
 
 200-core
+
+
 100-fr 
 
 
@@ -498,11 +646,20 @@ The steps to clean up are:
 Go to repo root directory
 If needed, repeat initial Terraform setup, (env variables and init script sourcing)
 
-         cd 200-core
-         tdestroy
 
-         cd ../100-fr
-         tdestroy
+
+
+
+cd 200-core
+
+
+tdestroy
+
+
+ cd ../100-fr
+
+
+tdestroy
 
 
 

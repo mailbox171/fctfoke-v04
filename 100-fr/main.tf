@@ -35,7 +35,7 @@ module "oke" {
 
   #OPERATOR ENABLED 
   operator_enabled  = true
-  operator_instance_principal = true 
+  operator_instance_principal = true #required for CALICO, metrics server, ...
   operator_shape    = var.operator_shape
   operator_timezone = var.operator_timezone
 
@@ -74,5 +74,18 @@ module "oke" {
   #Additionally, the bastion and operator hosts must be enabled as well as instance_principal on the operator.
   use_encryption  = false  
   existing_key_id = "<existing_key_id>"
+
+  #WAF
+  waf_enabled = var.waf_enabled
+  
+  allow_node_port_access = var.allow_node_port_access
+  
+
+  #NODE DOCTOR
+  allow_worker_ssh_access = var.allow_worker_ssh_access
+
+  #CALICO
+  calico_enabled = var.calico_enabled
+  
 
 }

@@ -6,14 +6,15 @@
 
 
  
-Setting up with Terraform
----------------------------------------------------------------------------
+Setting up with Terraform  
+-------------------------
 
 From Terraform point of view, we have two COMPONENTS
-100-fr
-200-core 
+  100-fr
+  200-core 
 
-The are arrenged in a LAYERED ARCHITECTURE, PLEASE CREATE AND DESTROY IN REVERSE ORDER
+The are arrenged in a LAYERED ARCHITECTURE, with 100 being the bottom layer
+Therefore, PLEASE CREATE AND DESTROY IN REVERSE ORDER
    Create      100-fr   -->  200-core 
    Destroy     200-core -->  100-fr     
 
@@ -50,20 +51,19 @@ alias tapply="terraform apply  -var-file=./../g.tfvars -var-file=./$TFENV/$TFREG
 source ~/.bashrc
 
 
-MODULE 100 FR SETUP - RUN WORDPRESS AGAINST MYSQL
--------------------------------------------------
+LAYER 100-FR PROVISIONING
+-------------------------
 
+cd <repo-root>
 cd 100-fr
 
 edit sec.auto.tfvars
-(set variables values)
+(see template file, set required variables values)
 
 export TFENV=dev
 export TFREGION=eu-frankfurt-1
 
-source  ~/.bashrc   # ALWAYS!
-
-
+source  ~/.bashrc   # ALWAYS source after updating env variables!
 
 
 
@@ -78,23 +78,64 @@ ssh_to_operator = "ssh -i ~/keys/ssh-key-2021-07-01.key -J opc@xxx.yyy.227.241 o
 
 
 
+SAVE OUTPUT, REPLACE CURRENT TIME IN FILE NAME
+terraform output > tf-output-<yyyymmddhhmm>.txt
 
-SSH TO OPERATOR
-Insert "-o StrictHostKeyChecking=no" option 
+(example: terraform output tf-output-202109100924.txt)
 
-ssh_to_operator = "ssh -o StrictHostKeyChecking=no  -i ~/keys/ssh-key-2021-07-01.key -J opc@130.61.227.241 opc@10.0.0.6"
+
+
+
+SSH TO OPERATOR THROUGH BASTION
+Insert "-o StrictHostKeyChecking=no" option in the above command. Your IP addresses will be different.
+- BASTION Public IP
+- OPERATOR Private IP
+
+ssh -o StrictHostKeyChecking=no  -i ~/keys/ssh-key-2021-07-01.key -J opc@130.61.178.195 opc@10.0.0.6
+
 (..)
 Are you sure you want to continue connecting (yes/no)? yes
+
+
 
 
 TEST KUBECTL CONNECTION
 [opc@dev-operator ~]$ kubectl get nodes
 
-NAME           STATUS   ROLES   AGE     VERSION
-10.0.114.244   Ready    node    6m47s   v1.19.7
+NAME           STATUS   ROLES   AGE   VERSION
+10.0.115.141   Ready    node    2d    v1.20.8
+10.0.119.225   Ready    node    2d    v1.20.8
+
+Make note of nodes IP ADRESSES
 
 
-CREATE MYSQL DB
+
+
+RUN NODE DOCTOR
+---------------
+
+Login to a node through BASTION host (your addresses will differ)
+
+ssh -o StrictHostKeyChecking=no -i ~/keys/ssh-key-2021-07-01.key -J opc@130.61.113.107 opc@10.0.115.141
+
+
+Print troubleshooting output that identifies potential problem areas, with links to documentation to address those areas.
+
+sudo /usr/local/bin/node-doctor.sh --check 
+
+
+Gather system information in a bundle. If needed, My Oracle Support (MOS) provides instructions to upload the bundle to a support ticket.
+
+sudo /usr/local/bin/node-doctor.sh --generate
+
+
+
+
+DEPLOY WOPRPRESS AND MYSQL
+--------------------------
+
+
+CREATE SCHEMA WITHIN PROVISIONED MYSQL SERVICE DB
 sudo yum install mysql-shell
 #mysqlsh Username@IPAddressOfMySQLDBSystemEndpoint
 mysqlsh adminUser@10.0.3.8
@@ -154,7 +195,7 @@ If you frget, you can also delete the LB using OCI console
 
 
 
-Set-up NGINX Ingress Controller
+SET UP NGINX Ingress Controller
 -------------------------------
 
 Ingress Controller 
@@ -178,13 +219,21 @@ The hello-world backend comprises:
 
 
 Setting Up the Example Ingress Controller
-1. If you haven't already done so, follow the steps to set up the cluster's kubeconfig configuration file
+1. If you haven't already done so, follow the steps to set up the cluster's kubeconfig configuration file. No need to do this if working from the OPERATOR virtual machine.
+If working from the machine used as Terraform client, type:
                  export KUBECONFIG=<repo-root>/100-fr/generated/kubeconfig
 
 
 Creating the Service Account, and the Ingress Controller
-1. Run the following command to create the nginx-ingress-controller ingress controller deployment, along with the Kubernetes RBAC roles and bindings:
-                 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.0/deploy/static/provider/cloud/deploy.yaml
+1. Run the following command to create the nginx-ingress-controller ingress controller deployment, along with the Kubernetes RBAC roles and bindings. First download the manifest file.
+                 wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.0/deploy/static/provider/cloud/deploy.yaml
+
+Edit the file "deploy.yaml", changing the following line
+                 OLD:  externalTrafficPolicy: Local
+                 NEW:  externalTrafficPolicy: Cluster
+
+Apply the deploy.yaml file
+                 kubectl apply -f deploy.yaml
 
 To check if the ingress controller pods have started, run the following command:
 
@@ -197,13 +246,10 @@ To detect which version of the ingress controller is running, exec into the pod 
                  POD_NAME=$(kubectl get pods -n $POD_NAMESPACE -l app.kubernetes.io/name=ingress-nginx --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')
                  kubectl exec -it $POD_NAME -n $POD_NAMESPACE -- /nginx-ingress-controller --version
 
-Create the ingress-nginx ingress controller service by running the following command:
-                cd <repo-root>/100-fr/k8s/ingress
-                kubectl apply -f cloud-generic.yaml
 
 Verify that the ingress-nginx Ingress Controller Service is Running as a Load Balancer Service. View the list of running services by entering:
-                kubectl get svc -n ingress-nginx   
-The output from the above command shows the EXTERNAL-IP for the ingress-nginx Service.
+                get svc ingress-nginx-controller -n ingress-nginx   
+The output from the above command shows the EXTERNAL-IP for the ingress-nginx Service. Make note of the external ip
 
 
 Creating a TLS Secret.
@@ -217,12 +263,12 @@ Create the TLS secret by entering:
 
 Setting Up the Example Backend. In this section, you define a hello-world backend service and deployment.
 Create the new hello-world deployment and service on nodes in the cluster by running the following command:
-                kubectl create -f hello-world-ingress.yaml
+                kubectl apply -f hello-world-ingress.yaml
 
 
 Using the Example Ingress Controller to Access the Example Backend
 In this section you create an ingress to access the backend using the ingress controller.
-                kubectl create -f ingress.yaml
+                kubectl apply -f ingress-v1.yaml
 
 Verify that the Example Components are Working as Expected.
 To confirm the ingress-nginx service is running as a LoadBalancer service, obtain its external IP address by entering:
@@ -258,6 +304,72 @@ Use the external IP address of the ingress-nginx service (for example, 129.146.2
 
 
  
+
+SET UP Web Application Firewall
+-------------------------------
+
+Before creating the WAF policy, you need to know the public IP address EXTERNALIP of the load balancer already been deployed for your Ingress resource (see above).
+
+To secure your application using WAF, first, you need to create a WAF policy.
+
+    In to the Oracle Cloud Infrastructure console, go to Security and click WAF Policies.
+    If prompted, pick a compartment where the WAF policy should be created.
+    Click Create WAF Policy.
+    In the Create WAF Policy dialog box, enter the fields as follows:
+
+ 
+    Policy Name 	fctfoke Policy
+    Primary Domain 	fctkoke.com
+    Additional Domains 	<Leave blank>
+    Origin Name 	fctfoke Load Balancer
+    URI 	        <EXTERNALIP>
+
+
+Look in the policy web page, at the top, for a message like
+    Visit your DNS provider and add your CNAME fctfoke-com.o.waas.oci.oraclecloud.net to your domain's DNS configuration. Learn More
+
+Make note of the CNAME
+
+Identify a (there may be several) network IP address for the CNAME.
+
+nslookup <CNAME>
+
+Example
+    nslookup  fctfoke-com.o.waas.oci.oraclecloud.net
+    Server:  fritz.box
+    Address:  192.168.178.1
+
+    Non-authoritative answer:
+    Name:    eu-switzerland.inregion.waas.oci.oraclecloud.net
+    Addresses:  192.29.61.119
+                192.29.56.104
+                192.29.61.248
+    Aliases:  fctfoke-com.o.waas.oci.oraclecloud.net
+              tm.inregion.waas.oci.oraclecloud.net
+
+
+A real production environment would require the correct setup for DNS. Here will just resove the name locally, just to test the WAF settings.
+
+Select any single address from the Non-authoritative answer section of the nslookup, and create a hosts entry for the example primary domain in the /etc/hosts file of your client machine(s) as the following:
+
+# hosts file entry
+# <WAF IP Address>    <domain>  
+   192.29.56.104      fctfoke-com
+
+
+In your policy page, select Access Control in the lower left menu.
+Access Rules >> Create Access Rule
+
+   Action: Show CAPTCHA [leave all defaults]
+   Conditions: HTTP Method is  GET
+Save Changes
+
+Wait 15 minutes
+
+Try to access your EXTERNALIP
+    http://fctfoke.com/
+
+You shuold be prompted with a CAPTCHA, which means the WAF is active. 
 
 
 

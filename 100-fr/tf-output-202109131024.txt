@@ -1,0 +1,23 @@
+allow_node_port_access = true
+allow_worker_ssh_access = true
+bastion_public_ip = "130.61.225.107"
+calico_enabled = true
+cluster_id = "ocid1.cluster.oc1.eu-frankfurt-1.aaaaaaaavznouabdmd3nhr2jczm4lsrnzp6hlwapr3kaa2e3hcmnssu2egca"
+configuration_id = "ocid1.mysqlconfiguration.oc1..aaaaaaaah6o6qu3gdbxnqg6aw56amnosmnaycusttaa7abyq2tdgpgubvsgj"
+ig_route_id = "ocid1.routetable.oc1.eu-frankfurt-1.aaaaaaaagupwpoan2k2uf7qie3otro6tcxoawqpzzsbwpt4fjhft7wwjelfa"
+kubeconfig = "export KUBECONFIG=generated/kubeconfig"
+nat_route_id = "ocid1.routetable.oc1.eu-frankfurt-1.aaaaaaaanjbza5sh3fjrgr33p4qv2nujj35veamiunnf7mezgumfjnzvajnq"
+nodepool_ids = {
+  "dev-np1" = "ocid1.nodepool.oc1.eu-frankfurt-1.aaaaaaaaj4nbz5ccinyjmkiebr5zeadwqykawkp5rikdqmtbcnlnriohrxfa"
+}
+operator_private_ip = "10.0.0.6"
+ssh_to_bastion = "ssh -i ~/keys/ssh-key-2021-07-01.key opc@130.61.225.107"
+ssh_to_operator = "ssh -i ~/keys/ssh-key-2021-07-01.key -J opc@130.61.225.107 opc@10.0.0.6"
+subnet_ids = {
+  "cp" = "ocid1.subnet.oc1.eu-frankfurt-1.aaaaaaaaa7ux7426r3ijhckydzayquxod6m2yeuppgmdijydikzycbatijua"
+  "int_lb" = ""
+  "pub_lb" = "ocid1.subnet.oc1.eu-frankfurt-1.aaaaaaaadyb2nbs77pddfzohvyjqebqmd7thpq4zeyma7xwnplh7zakyhehq"
+  "workers" = "ocid1.subnet.oc1.eu-frankfurt-1.aaaaaaaa574ppq5zdyof5bcummc3llixru4u3gn7k3posakngxvke2okdhkq"
+}
+vcn_id = "ocid1.vcn.oc1.eu-frankfurt-1.amaaaaaazjgvoqyafhcdwwl55k7h35p3adxromhta6w2wnpnwl73kn2wd2ja"
+waf_enabled = true

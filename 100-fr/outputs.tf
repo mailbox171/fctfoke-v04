@@ -34,6 +34,30 @@ output "vcn_id" {
   value       = module.oke.vcn_id
 }
 
+
+# input values reminders
+
+output "waf_enabled" {
+  description = "enable WAF for OKE public load balancers"
+  value       = var.waf_enabled
+}
+
+output "allow_node_port_access" {
+  description = "enable Node Port access for workers"
+  value       = var.allow_node_port_access
+}
+
+output "allow_worker_ssh_access" {
+  description = "enable ssh access for workers"
+  value       = var.allow_worker_ssh_access
+}
+
+output "calico_enabled" {
+  description = "calico_enabled for network policies support"
+  value       = var.calico_enabled
+}
+
+
 # convenient output
 
 output "bastion_public_ip" {

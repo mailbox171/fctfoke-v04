@@ -8,3 +8,5 @@ sec.auto.tfvars
 terraform.tfstate*
 kubeconfig
 notes.txt
+*.log
+*.txt

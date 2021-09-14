@@ -22,6 +22,8 @@ The main elements covered are:
 - Web Application Firewall (WAF), for public load balancers protection
 
 - Istio Service Mesh installation and samples [PLANNED]
+  
+  
 
 ## Setting up with Terraform
 
@@ -179,36 +181,65 @@ Deploy WOPRPRESS connected to OCI MySQL Service
 
 ### Create *polls* schema within MYSQL SERVICE DB
 
-sudo yum install mysql-shell #mysqlsh Username@IPAddressOfMySQLDBSystemEndpoint mysqlsh adminUser@10.0.3.8 BEstrO0ng_#11
+sudo yum install mysql-shell 
+
+
+
+// Command template will be 
+// mysqlsh Username@IPAddressOfMySQLDBSystemEndpoint 
+
+
+
+mysqlsh adminUser@10.0.3.8 BEstrO0ng_#11
+
+
 
 \sql CREATE DATABASE polls;
+
 Query OK, 1 row affected (0.0038 sec)
+
+
 
 \quit
 
+
+
 ### CLONE THIS REPO ON OPERATOR VM
 
- git clone https://github.com/mailbox171/<repo-name>
+ git clone https://REPO-URL
 
-GO TO K8S WORDPRESS K8S MANIFEST FOLDER 
-cd fctfoke-v01/100-fr/k8s/wp/
+
+
+Go to K8S WORDPRESS manifest folder 
+
+cd REPO-ROOT/100-fr/k8s/wp/
 
 ### APPLY MANIFEST .yaml FILES
 
 [opc@dev-operator wp]$ kubectl apply -f svc-mysql.yaml 
+
 service/external-mysql-service created
+
 endpoints/external-mysql-service created
 
+
+
 [opc@dev-operator wp]$ kubectl apply -f wp.yaml 
+
 service/wordpress created
+
 persistentvolumeclaim/wp-pv-claim created
+
 deployment.apps/wordpress created
+
+
 
 ### Test WORDPRESS
 
 CHECK SERVICES, WAIT FOR EXTERNAL ADDRESS (may be 'pending' for a while)
 
 [opc@dev-operator wp]$ kubectl get svc
+
 NAME                     TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)        AGE
 
 external-mysql-service   ClusterIP      10.96.104.164   <none>           3306/TCP       81s
@@ -217,11 +248,15 @@ kubernetes               ClusterIP      10.96.0.1       <none>           443/TCP
 
 wordpress                LoadBalancer   10.96.192.55    129.159.243.47   80:30952/TCP   40s
 
-GO TO ADDRESS, IN ANY INTERNET BROWSER
+
+
+GO TO LoadBalancer EXTERNAL-IP address, using a browser
 
 http://129.159.243.47
 
 WordPress website should be reached!
+
+
 
 **REMINDER**
 
@@ -229,14 +264,20 @@ When destroyng this component, delete load balancer in k8s using kubectl, before
 
 [opc@dev-operator wp]$ kubectl delete service wordpress 
 
-If you forget, you can also delete the LB using OCI console, then you need to run "terraform destroy" again, using "tdestroy" alias.
+If you forget, you can also delete the LB using OCI console
+
+
+
+Then you need to run "terraform destroy" again, using "tdestroy" alias.
+
+
 
 NGINX Ingress Controller
 -------------------------------
 
 ### Ingress Controller
 
-The ingress controller comprises:
+The ingress controller test installation comprises:
 
 - An ingress controller deployment called nginx-ingress-controller. 
   The deployment deploys an image that contains the binary for the ingress controller and Nginx. 
@@ -246,28 +287,37 @@ The ingress controller comprises:
   The service exposes the ingress controller deployment as a OCI LoadBalancer type service. 
   Because Container Engine for Kubernetes uses an Oracle Cloud Infrastructure integration/cloud-provider, a load balancer will be dynamically created with the correct nodes configured as a backend set.
 
-Backend Components
-The hello-world backend comprises:
+
+The hello-world backend test deployment comprises:
 
 - A backend deployment called docker-hello-world. This is done by using a stock hello-world image that serves the minimum required routes for a default backend.
 - A backend service called docker-hello-world-svc.The service exposes the backend deployment for consumption by the ingress controller deployment.
+  
+  
 
 ### Setting Up the Example Ingress Controller
 
 1. If you haven't already done so, follow the steps to set up the cluster's kubeconfig configuration file. No need to do this if working from the OPERATOR virtual machine.
    If working from the machine used as Terraform client, type:
    
-          export KUBECONFIG=<repo-root>/100-fr/generated/kubeconfig
+          export KUBECONFIG=REPO-ROOT/100-fr/generated/kubeconfig
 
 Creating the Service Account, and the Ingress Controller
 
-1. Run the following command to create the nginx-ingress-controller ingress controller deployment, along with the Kubernetes RBAC roles and bindings. First download the manifest file.
+1. Run the following commands to create the nginx-ingress-controller ingress controller deployment, along with the Kubernetes RBAC roles and bindings. 
+   
+   First, download the manifest file.
    
            wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.0/deploy/static/provider/cloud/deploy.yaml
 
-Edit the file "deploy.yaml", changing the following line
-                 OLD:  externalTrafficPolicy: Local
-                 NEW:  externalTrafficPolicy: Cluster
+Edit the file "deploy.yaml", changing the following line (to allow multi-node clusters):
+
+
+                   OLD:  externalTrafficPolicy: Local
+
+                   NEW:  externalTrafficPolicy: Cluster
+
+
 
 Apply the deploy.yaml file
                  kubectl apply -f deploy.yaml
@@ -284,8 +334,14 @@ To detect which version of the ingress controller is running, exec into the pod 
                  kubectl exec -it $POD_NAME -n $POD_NAMESPACE -- /nginx-ingress-controller --version
 
 Verify that the ingress-nginx Ingress Controller Service is Running as a Load Balancer Service. View the list of running services by entering:
+
+
                 get svc ingress-nginx-controller -n ingress-nginx   
+
+
 The output from the above command shows the EXTERNAL-IP for the ingress-nginx Service. Make note of the external ip
+
+
 
 ### Creating a TLS Secret.
 
@@ -348,6 +404,8 @@ Use the external IP address of the ingress-nginx service (for example, 129.146.2
 
                 curl --trace -  http://<EXTERNALIP>
 
+
+
 SET UP Web Application Firewall
 -------------------------------
 
@@ -360,35 +418,37 @@ If prompted, pick a compartment where the WAF policy should be created.
 Click Create WAF Policy.
 In the Create WAF Policy dialog box, enter the fields as follows:
 
-Policy Name     fctfoke Policy
+Policy Name                              fctfoke Policy
 
-Primary Domain     fctkoke.com
+Primary Domain                       fctkoke.com
 
-Additional Domains     blank
+Additional Domains                 blank
 
-Origin Name     fctfoke Load Balancer
+Origin Name                             fctfoke Load Balancer
 
-URI             EXTERNALIP
+URI                                              EXTERNALIP // of Ingress LB service
 
-Look in the policy web page, at the top, for a message like
+
+
+Look in the policy OCI Console web page, at the top, for a message like
 
     *Visit your DNS provider and add your CNAME fctfoke-com.o.waas.oci.oraclecloud.net to your domain's DNS configuration. Learn More*
 
-Make note of the CNAME
+Make note of the CNAME  (example "fctfoke-com.o.waas.oci.oraclecloud.net")
 
-Identify a (there may be several) network IP address for the CNAME.
+Identify one (there may be several) network IP address for the CNAME.
 
 nslookup CNAME
 
-Example
 
-    nslookup  fctfoke-com.o.waas.oci.oraclecloud.net
-    
-    
-    Server:  fritz.box
-    
-    
-    Address:  192.168.178.1
+
+Example:
+
+nslookup  fctfoke-com.o.waas.oci.oraclecloud.net
+
+Server:  fritz.box
+
+Address:  192.168.178.1
 
 Non-authoritative answer:
 
@@ -396,19 +456,24 @@ Name:    eu-switzerland.inregion.waas.oci.oraclecloud.net
 
 Addresses:  192.29.61.119
 
-            192.29.56.104
-    
-    
-            192.29.61.248
+                        192.29.56.104
+
+                        192.29.61.248
 
 Aliases:  fctfoke-com.o.waas.oci.oraclecloud.net
           tm.inregion.waas.oci.oraclecloud.net
 
-A real production environment would require the correct setup for DNS. Here will just resove the name locally, just to test the WAF settings.
 
-Select any single address from the Non-authoritative answer section of the nslookup, and create a hosts entry for the example primary domain in the /etc/hosts file of your client machine(s) as the following:
 
-hosts file entry 
+A real production environment would require a proper setup for DNS in OCI. 
+
+Here will just resove the name locally, just to test the WAF settings.
+
+Select any single address from the Non-authoritative answer section of your nslookup, and create a hosts entry for the example primary domain in the /etc/hosts file of your client machine(s) as the following:
+
+
+
+    New hosts file entry (use your IP address):
 
 ```
 192.29.56.104                fctfoke-com
@@ -423,7 +488,7 @@ Save Changes
 
 Wait 15 minutes
 
-Try to access your EXTERNALIP
+Try to access your CNAME host
 
     http://fctfoke.com/
 

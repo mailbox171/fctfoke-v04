@@ -684,13 +684,480 @@ kubectl delete ns client stars management-ui
 
 
 
+
+
+## Istio quick tour: setup and sample configuration
+
+In this section we install Istio in the OKE cluster and we take it for a quick spin, testing same sample deployments and configurations.
+
+
+We don't provide an introduction to Istio, its features and capabilities, which are just marginally covered here, the objective being just a quick test of Istio on OKE.
+
+
+
+### Istio installation
+
+Download and extract the latest Istio release automatically (Linux or macOS):
+
+```
+curl -L https://istio.io/downloadIstio | sh -
+
+
+% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   102  100   102    0     0     95      0  0:00:01  0:00:01 --:--:--    95
+100  4549  100  4549    0     0   4016      0  0:00:01  0:00:01 --:--:--  4016
+
+Downloading istio-1.11.2 from https://github.com/istio/istio/releases/download/1.11.2/istio-1.11.2-linux-amd64.tar.gz ...
+
+Istio 1.11.2 Download Complete!
+
+Istio has been successfully downloaded into the istio-1.11.2 folder on your system.
+
+Next Steps:
+See https://istio.io/latest/docs/setup/install/ to add Istio to your Kubernetes cluster.
+
+To configure the istioctl client tool for your workstation,
+add the /home/opc/fctfoke/fc03/fctfoke/100-fr/k8s/istio/istio-1.11.2/bin directory to your environment path variable with:
+     export PATH="$PATH:/home/opc/fctfoke/fc03/fctfoke/100-fr/k8s/istio/istio-1.11.2/bin"
+
+Begin the Istio pre-installation check by running:
+     istioctl x precheck 
+
+Need more information? Visit https://istio.io/latest/docs/setup/install/ 
+
+```
+
+Explore directories
+
+
+
+```
+ls
+istio-1.11.2
+
+
+
+cd istio-1.11.2/
+[opc@h-k8s-lab-a-helidon-2020-29-10-fc istio-1.11.2]$ ls
+bin  LICENSE  manifests  manifest.yaml  README.md  samples  tools
+
+```
+
+
+
+
+
+The installation directory contains:
+
+- Sample applications in samples/
+
+- The istioctl client binary in the bin/ directory.
+
+
+
+Add the istioctl client to your path (Linux or macOS):
+
+
+
+```
+export PATH=$PWD/bin:$PATH
+
+istioctl x precheck 
+
+No issues found when checking the cluster. Istio is safe to install or upgrade!
+  To get started, check out https://istio.io/latest/docs/setup/getting-started/
+
+```
+
+
+
+
+
+For this installation, we use the demo configuration profile. It’s selected to have a good set of defaults for testing, but there are other profiles for production or performance testing.
+
+
+
+```
+istioctl install --set profile=demo -y
+
+ Istio core installed                                                                                                                                    
+ Istiod installed                                                                                                                                        
+ Egress gateways installed                                                                                                                               
+ Ingress gateways installed                                                                                                                              
+ Installation complete                                                                                                                                   
+Thank you for installing Istio 1.11.  Please take a few minutes to tell us about your install/upgrade experience!  https://forms.gle/kWULBRjUv7hHci7T6
+
+```
+
+
+
+Add a namespace label (to the deafult namespace) to instruct Istio to automatically inject Envoy sidecar proxies when you deploy your application later
+
+```
+kubectl label namespace default istio-injection=enabled
+
+namespace/default labeled
+
+```
+
+
+
+### Deploy the Bookinfo sample application
+
+
+
+```
+kubectl apply -f samples/bookinfo/platform/kube/bookinfo.yaml
+```
+
+
+
+The application displays information about a book, similar to a single catalog entry of an online book store. Displayed on the page is a description of the book, book details (ISBN, number of pages, and so on), and a few book reviews.
+
+
+
+The Bookinfo application is broken into four separate microservices:
+
+- productpage. The productpage microservice calls the details and reviews microservices to populate the page.
+
+- details. The details microservice contains book information.
+
+- reviews. The reviews microservice contains book reviews. It also calls the ratings microservice.
+
+- ratings. The ratings microservice contains book ranking information that accompanies a book review.
+
+
+
+![](C:\App\Projects\LIFT\Projects\oke_eks\arch\noistio.svg)
+
+
+
+There are 3 versions of the reviews microservice:
+    Version v1 doesn’t call the ratings service.
+    Version v2 calls the ratings service, and displays each rating as 1 to 5 black stars.
+    Version v3 calls the ratings service, and displays each rating as 1 to 5 red stars.
+
+
+
+The application will start. As each pod becomes ready, the Istio sidecar will be deployed along with it, so that each pod reports 2/2 containers.
+
+
+
+```
+kubectl get pods
+
+NAME                              READY   STATUS    RESTARTS   AGE
+details-v1-79f774bdb9-l6tgh       2/2     Running   0          7m35s
+productpage-v1-6b746f74dc-hkbcl   2/2     Running   0          7m33s
+ratings-v1-b6994bb9-hgwtn         2/2     Running   0          7m34s
+reviews-v1-545db77b95-wzxch       2/2     Running   0          7m35s
+reviews-v2-7bf8c9648f-l8tn8       2/2     Running   0          7m35s
+reviews-v3-84779c7bbc-6pslz       2/2     Running   0          7m35s
+
+```
+
+
+
+Re-run the previous command and wait until all pods report READY 2/2 and STATUS Running before you go to the next step. This might take a few minutes depending on your platform.
+
+All services are internal ClusterIP so far.
+
+```
+kubectl get services
+
+NAME          TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+details       ClusterIP   10.96.17.216    <none>        9080/TCP   5m33s
+kubernetes    ClusterIP   10.96.0.1       <none>        443/TCP    27h
+productpage   ClusterIP   10.96.190.98    <none>        9080/TCP   5m33s
+ratings       ClusterIP   10.96.17.15     <none>        9080/TCP   5m33s
+reviews       ClusterIP   10.96.230.122   <none>        9080/TCP   5m33s
+
+
+
+```
+
+Verify everything is working correctly up to this point. 
+Run this command to see if the app is running inside the cluster and serving HTML pages by checking for the page title in the response.
+
+```
+kubectl exec "$(kubectl get pod -l app=ratings -o jsonpath='{.items[0].metadata.name}')" -c ratings -- curl -sS productpage:9080/productpage | grep -o "<title>.*</title>"
+
+<title>Simple Bookstore App</title>
+
+```
+
+
+
+### Open the application to outside traffic
+
+The Bookinfo application is deployed but not accessible from the outside. To make it accessible, you need to create an Istio Ingress Gateway, which maps a path to a route at the edge of your mesh.
+
+We have already a productpage ClusterIP service exposed internally.
+
+
+1. We will create a bookinfo VirtualService to map requests with seected paths to the productpage service.
+
+2. The bookinfo VirtualService will be exposed externally thru the bookinfo-gateway
+
+
+The 2 new objects are both defined in the bookinfo-gateway.yaml file
+
+
+
+```
+piVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: bookinfo-gateway
+spec:
+  selector:
+    istio: ingressgateway # use istio default controller
+  servers:
+
+- port:
+    number: 80
+    name: http
+    protocol: HTTP
+  hosts:
+  - "*"
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: bookinfo
+spec:
+  hosts:
+
+- "*"
+  gateways:
+- bookinfo-gateway
+  http:
+- match:
+  - uri:
+      exact: /productpage
+  - uri:
+      prefix: /static
+  - uri:
+      exact: /login
+  - uri:
+      exact: /logout
+  - uri:
+      prefix: /api/v1/products
+    route:
+  - destination:
+      host: productpage
+      port:
+         number: 9080    
+
+```
+
+
+
+Apply the manifest file.
+
+```
+kubectl apply -f samples/bookinfo/networking/bookinfo-gateway.yaml
+
+gateway.networking.istio.io/bookinfo-gateway created
+virtualservice.networking.istio.io/bookinfo created
+
+```
+
+
+
+OKE supports external load balancers which get assigned to istio gateways, as you can check using the following command, which shows an EXTERNAL-IP available for extarnal traffic.
+
+```
+kubectl get svc istio-ingressgateway -n istio-system
+
+NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)                                                                      AGE
+istio-ingressgateway   LoadBalancer   10.96.245.190   152.70.183.175   15021:30818/TCP,80:31939/TCP,443:30577/TCP,31400:30769/TCP,15443:32662/TCP   35m
+
+```
+
+Follow these instructions to set the INGRESS_HOST and INGRESS_PORT variables for accessing the gateway, extracting the values from the json "get -o" descriptors
+
+```
+export INGRESS_HOST=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].port}')
+export SECURE_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="https")].port}')
+```
+
+Check the values have been set.
+
+```
+env | grep INGRESS
+
+INGRESS_PORT=80
+SECURE_INGRESS_PORT=443
+INGRESS_HOST=152.70.183.175
+
+```
+
+Set GATEWAY_URL
+
+```
+export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
+
+echo "$GATEWAY_URL"
+
+152.70.183.175:80
+
+```
+
+Verify external access.
+
+Run the following command to retrieve the external address of the Bookinfo application.
+
+```
+echo "http://$GATEWAY_URL/productpage"
+
+http://152.70.183.175:80/productpage
+
+```
+
+Paste the output from the previous command into your web browser and confirm that the Bookinfo product page is displayed.
+
+
+
+### Install addon tools/frameworks: Kiali dashboard, along with Prometheus, Grafana, and Jaeger.
+
+
+
+```
+kubectl apply -f samples/addons
+
+serviceaccount/grafana created
+configmap/grafana created
+service/grafana created
+deployment.apps/grafana configured
+configmap/istio-grafana-dashboards configured
+(..)
+
+kubectl rollout status deployment/kiali -n istio-system
+
+Waiting for deployment "kiali" rollout to finish: 0 of 1 updated replicas are available...
+deployment "kiali" successfully rolled out
+
+```
+
+
+
+We can now visualize the Kialy dashboard.
+<u>This requires X11, VNC or any other graphical display access to your machine.
+If not available, yoy can skip this step.</u>
+
+
+
+To see trace data, you must send requests to your service. The number of requests depends on Istio’s sampling rate. You set this rate when you install Istio. The default sampling rate is 1%. You need to send at least 100 requests before the first trace is visible. To send 200 requests to the productpage service, use the following command (it will take few minutes):
+
+```
+$ for i in $(seq 1 300); do curl -s -o /dev/null "http://$GATEWAY_URL/productpage"; done
+```
+
+Now open the dashboard
+
+```
+istioctl dashboard kiali
+```
+
+In the left navigation menu, select Graph and in the Namespace drop down, select default.
+On the upper right, select "Last 1h", then refresh.
+
+The Kiali dashboard shows an overview of your mesh with the relationships between the services in the Bookinfo sample application. It also provides filters to visualize the traffic flow.
+
+Hit control-C in your terminal to close the dashboard
+
+
+
+### Request Routing with Istio
+
+Retrieve the BookInfo url used before, and open in an external browser
+
+http://152.70.183.175:80/productpage
+
+Refresh several times. You’ll notice that sometimes the book review output contains star ratings and other times it does not. This is because without an explicit default service version to route to, Istio routes requests to all available versions in a round robin fashion.
+
+To route to one version only, you apply virtual services that set the default version for the microservices. In this case, the virtual services will route all traffic to v1 of each microservice.
+
+For this, we create destination rules, which maps pod labels to subsets, as the following snippet shows
+
+```
+ spec:
+    host: reviews
+    subsets:
+    - labels:
+        version: v1
+      name: v1
+    - labels:
+        version: v2
+      name: v2
+    - labels:
+        version: v3
+      name: v3
+```
+
+
+
+```
+kubectl apply -f samples/bookinfo/networking/destination-rule-all.yaml
+```
+
+Then we create virtual services to select the proper subset, by name (v1)
+
+```
+  spec: 
+    hosts:
+    - reviews
+    http:
+    - route:
+      - destination:
+          host: reviews
+          subset: v1
+```
+
+
+
+```
+kubectl apply -f samples/bookinfo/networking/virtual-service-all-v1.yaml
+```
+
+
+
+To visualize the objects we just created use these commands.
+
+```
+
+ kubectl get destinationrules -o yaml
+ kubectl get virtualservices -o yaml
+```
+
+You can easily test the new configuration by once again refreshing the /productpage of the Bookinfo app.
+
+
+Notice that the reviews part of the page displays with no rating stars, no matter how many times you refresh. This is because you configured Istio to route all traffic for the reviews service to the version reviews:v1 and this version of the service does not access the star ratings service.
+
+When you’re finished experimenting with the Bookinfo sample, uninstall and clean it up using the following instructions:
+
+    samples/bookinfo/platform/kube/cleanup.sh
+
+To confirm [default] namespace hit enter.
+
+
+
 ## Provision component/layer 200 CORE
 
 These are the steps to create the second layer, with a different VCN, Local Peering Gateway with the first layer, and its own OKE cluster
 
+```
 cd REPO-ROOT
 
 cd 200-core
+
+```
 
 edit sec.auto.tfvars
 
@@ -700,21 +1167,25 @@ edit sec.auto.tfvars
 
 // env setup - not necessary, if already done
 
+```
 export TFENV=dev
 
 export TFREGION=eu-frankfurt-1
 
 source  ~/.bashrc   // ALWAYS, after setting env variables
+```
 
 
 
 Run Terraform now.
 
+```
 tinit
 
 tplan
 
 tapply
+```
 
 
 
@@ -724,22 +1195,26 @@ tapply
 
 PLEASE DESTROY IN REVERSE ORDER
 
+
+
 200-core
 
 100-fr 
+
+
 
 The steps to clean up are:
 
 Go to repo root directory
 If needed, repeat initial Terraform setup, (env variables and init script sourcing)
 
+```
 cd 200-core
-
 tdestroy
 
- cd ../100-fr
-
+cd ../100-fr
 tdestroy
+```
 
 
 
@@ -747,4 +1222,4 @@ tdestroy
 
 
 
-                                           *F.Costa Sep 2021*
+                                           *F. Costa Sep 2021*

@@ -10,3 +10,5 @@ kubeconfig
 notes.txt
 *.log
 *.txt
+*.crt
+*.key

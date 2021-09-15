@@ -1,7 +1,7 @@
 # FC Oracle OCI OKE Sample Architecture
 
 This repo is the result of a self-training hands-on exercise.
-It contains scripts, additional configurations and instructions to set up an OKE environment, with some additional services, features, and sample deployments.
+It contains scripts, additional configurations and instructions to set up an OKE (Oracle Kubernetes Engine) environment, with some additional services, features, and sample deployments.
 
 The main elements covered are:
 
@@ -24,6 +24,7 @@ The main elements covered are:
 - Istio Service Mesh installation and samples [PLANNED]
   
   
+  
 
 ## Setting up with Terraform
 
@@ -36,18 +37,19 @@ From Terraform point of view, we have two *components*
    200-core 
 
 They are arrenged in a LAYERED ARCHITECTURE, with 100-fr being the bottom layer
-Therefore, PLEASE CREATE AND DESTROY IN REVERSE ORDER
+Therefore, PLEASE CREATE IN ORDER, AND DESTROY IN REVERSE ORDER
 
    Create      100-fr   -->  200-core
 
-   Destroy    200-core -->  100-fr     
+   Destroy    200-core -->  100-fr    
+    
 
 ### Terraform VARIABLE SCOPES
 
 Each VCN is a component.
 Variables for each component are generally defined (variables.tf) and assigned (terraform.tfvars) in the component root directory.
 
-In addition, the following scopes can be used (values will OVERRIDE what is in the root directory).
+In addition, the following scopes can be used, setting values in the proper file (values will OVERRIDE what is in the root directory).
 
 ```
 GLOBAL                        -var-file=./../g.tfvars
@@ -69,11 +71,15 @@ ENVIRONMENT                   -var-file=./../vars/envs/$TFENV/e.tfvars
 REGION                        -var-file=./../vars/regions/$TFREGION/r.tfvars
 ```
 
+
+
 ### Setup steps
 
+```
 export TFENV=dev
 
 export TFREGION=eu-frankfurt-1
+```
 
 Edit bashrc file
 
@@ -88,7 +94,13 @@ alias tplan="terraform plan -var-file=./../g.tfvars -var-file=./$TFENV/$TFREGION
 alias tapply="terraform apply  -var-file=./../g.tfvars -var-file=./$TFENV/$TFREGION/cer.tfvars -var-file=./$TFENV/ce.tfvars -var-file=./../vars/envs/$TFENV/e.tfvars -var-file=./../vars/regions/$TFREGION/r.tfvars"``
 ```
 
+
+
+```
 source ~/.bashrc
+```
+
+## 
 
 ## Layer 100-FR Provisioning
 
@@ -101,14 +113,19 @@ cd 100-fr
 edit sec.auto.tfvars
 (see template file, set required variables values)
 
+
+
+```
 export TFENV=dev
 
 export TFREGION=eu-frankfurt-1
 
-source  ~/.bashrc   # ALWAYS source after updating env variables!
+source  ~/.bashrc   //ALWAYS source after updating env variables!
+```
 
 Run Terraform now.
 
+```
 tinit
 
 tplan
@@ -119,13 +136,21 @@ Apply complete! Resources: 31 added, 0 changed, 0 destroyed.
 Outputs:
 (..)
 
-SAVE OUTPUT, REPLACE CURRENT TIME IN FILE NAME
+```
 
-terraform output > tf-output-.txt
+
+
+SAVE OUTPUT (may be useful later on), REPLACING CURRENT TIME IN FILE NAME
+
+terraform output > tf-output-TIME.txt
 
 (example: terraform output tf-output-202109100924.txt)
 
+
+
 Notice that an OCI MySql Service instance has been provisioned also.
+
+
 
 ### Accessing the environment
 
@@ -138,22 +163,26 @@ Insert "-o StrictHostKeyChecking=no" option in the above command. Your IP addres
 - BASTION Public IP
 - OPERATOR Private IP
 
+```
 ssh -o StrictHostKeyChecking=no  -i ~/keys/ssh-key-2021-07-01.key -J opc@130.61.178.195 opc@10.0.0.6
 
 (..)
 Are you sure you want to continue connecting (yes/no)? yes
 
+```
+
+### 
+
 ### Test KUBECTL connection
 
+```
 [opc@dev-operator ~]$ kubectl get nodes
 
 NAME           STATUS   ROLES   AGE   VERSION
-
 10.0.115.141   Ready    node    2d    v1.20.8
-
 10.0.119.225   Ready    node    2d    v1.20.8
-
 Make note of nodes IP ADRESSES
+```
 
 
 
@@ -161,100 +190,180 @@ If you want to enable kubectl autocompletion, you find instructions here [bash a
 
 
 
-RUN NODE DOCTOR
+Run Node Doctor
 ---------------
 
 Login to a node through BASTION host (your addresses will differ).
 
+```
 ssh -o StrictHostKeyChecking=no -i ~/keys/ssh-key-2021-07-01.key -J opc@130.61.113.107 opc@10.0.115.141
+```
 
 1. Print troubleshooting output that identifies potential problem areas, with links to documentation to address those areas.
 
+```
 sudo /usr/local/bin/node-doctor.sh --check 
+```
 
 2. Gather system information in a bundle. If needed, My Oracle Support (MOS) provides instructions to upload the bundle to a support ticket.
 
+```
 sudo /usr/local/bin/node-doctor.sh --generate
+```
 
-Deploy WOPRPRESS connected to OCI MySQL Service
+
+
+## Set up OCI Logging for containers
+
+In OCI console, check agent for oke workers:
+
+Open the navigation menu and click Compute. Under Compute, click Instances.
+Click the oke worker node instance that you're interested in.
+Click the Oracle Cloud Agent tab.
+Confirm that the Compute Instance Monitoring plugin is enabled, and all plugins are running.
+
+
+
+**Create a dynamic group**
+Use nodepool compartment id.
+
+
+Create a dynamic group with a rule that includes worker nodes in the
+ cluster's node pools as target hosts
+
+Name fctfoke-workernodes 
+
+`instance.compartment.id = 'ocid1.tenancy.oc1..xxxxxxxxxxx'`
+
+
+
+**Create policy**
+
+Use nodepool compartment id.
+
+
+
+
+Create a new policy
+
+Name allow-workers-to-log
+
+`allow dynamic-group fctfoke-workernodes to use log-content in compartment id ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+
+
+**Create log group**
+
+Name fctfoke-lg
+
+
+
+**Create log**
+
+Name fctfoke-log
+
+Create new configuration
+   Select dynamic group: fctfoke-workernodes
+   Log path:  `/var/log/containers/*`
+
+
+
+Deploy WORDPRESS, connect to MySQL Service
 --------------------------
 
-### Create *polls* schema within MYSQL SERVICE DB
+### Create *polls* schema within MySQL SERVICE DB
 
-sudo yum install mysql-shell 
+Still working on the operator VM, install mysql
+
+`sudo yum install mysql-shell `
 
 
 
 // Command template will be 
 // mysqlsh Username@IPAddressOfMySQLDBSystemEndpoint 
 
+//mysqlsh adminUser@10.0.3.8  
+//PASSWORD: BEstrO0ng_#11
 
+```
+opc@dev-operator ~]$ mysqlsh adminUser@10.0.3.8 
+Please provide the password for 'adminUser@10.0.3.8': *************
+MySQL Shell 8.0.26`
+```
 
-mysqlsh adminUser@10.0.3.8 BEstrO0ng_#11
+Create db schema
 
-
-
+```
 \sql CREATE DATABASE polls;
 
 Query OK, 1 row affected (0.0038 sec)
 
 
-
 \quit
+```
 
 
 
-### CLONE THIS REPO ON OPERATOR VM
+### Clone this github repo on operator VM
 
- git clone https://REPO-URL
+```
+git clone https://REPO-URL`
+```
 
+Set KUBECONFIG absolute path
 
+```
+export KUBECONFIG=REPO-ROOT/100-fr/generated/kubeconfig
+```
 
 Go to K8S WORDPRESS manifest folder 
 
-cd REPO-ROOT/100-fr/k8s/wp/
+`cd REPO-ROOT/100-fr/k8s/wp/`
 
-### APPLY MANIFEST .yaml FILES
+### Apply k8s manifest files
 
+MySql external service
+
+```
 [opc@dev-operator wp]$ kubectl apply -f svc-mysql.yaml 
 
 service/external-mysql-service created
-
 endpoints/external-mysql-service created
+```
 
+Wordpress file system, deployment and service
 
-
+```
 [opc@dev-operator wp]$ kubectl apply -f wp.yaml 
 
 service/wordpress created
-
 persistentvolumeclaim/wp-pv-claim created
-
 deployment.apps/wordpress created
-
-
+```
 
 ### Test WORDPRESS
 
-CHECK SERVICES, WAIT FOR EXTERNAL ADDRESS (may be 'pending' for a while)
+Check services, wait for EXTERNAL-IP (may be 'pending' for a while)
 
+```
 [opc@dev-operator wp]$ kubectl get svc
 
 NAME                     TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)        AGE
-
 external-mysql-service   ClusterIP      10.96.104.164   <none>           3306/TCP       81s
-
 kubernetes               ClusterIP      10.96.0.1       <none>           443/TCP        29m
-
 wordpress                LoadBalancer   10.96.192.55    129.159.243.47   80:30952/TCP   40s
+
+```
 
 
 
 GO TO LoadBalancer EXTERNAL-IP address, using a browser
 
-http://129.159.243.47
+`http://129.159.243.47`
 
 WordPress website should be reached!
+
+Create user and initialize WP site.
 
 
 
@@ -262,20 +371,44 @@ WordPress website should be reached!
 
 When destroyng this component, delete load balancer in k8s using kubectl, before terraform destroy. 
 
-[opc@dev-operator wp]$ kubectl delete service wordpress 
+`[opc@dev-operator wp]$ kubectl delete service wordpress `
+
+
 
 If you forget, you can also delete the LB using OCI console
 
 
 
-Then you need to run "terraform destroy" again, using "tdestroy" alias.
+Then, you need to run "terraform destroy" again, using "tdestroy" alias.
 
 
 
-NGINX Ingress Controller
--------------------------------
+## Check container logs in OCI Logging
 
-### Ingress Controller
+In OCI Console, select Observability >> Logs
+
+Select the OKE nodepool compartment
+
+Click on "fcoke-log" Log Name
+
+Explore the log items. You should see WordPress requests logged, like the following (truncated).
+
+
+
+```
+{
+  "datetime": 1631716205188,
+  "logContent": {
+    "data": {
+      "message": "2021-09-15T14:30:04.242933438+00:00 stdout F [2021-09-15T14:30:03.677Z] \"POST /wp-admin/admin-ajax.php HTTP/1.1\" 200 
+
+(..)
+
+```
+
+
+
+### Ingress Controller sample components
 
 The ingress controller test installation comprises:
 
@@ -297,8 +430,7 @@ The hello-world backend test deployment comprises:
 
 ### Setting Up the Example Ingress Controller
 
-1. If you haven't already done so, follow the steps to set up the cluster's kubeconfig configuration file. No need to do this if working from the OPERATOR virtual machine.
-   If working from the machine used as Terraform client, type:
+1. If you haven't already done so, follow the steps to set up the cluster's kubeconfig configuration file. 
    
           export KUBECONFIG=REPO-ROOT/100-fr/generated/kubeconfig
 
@@ -313,14 +445,17 @@ Creating the Service Account, and the Ingress Controller
 Edit the file "deploy.yaml", changing the following line (to allow multi-node clusters):
 
 
-                   OLD:  externalTrafficPolicy: Local
+                   OLD:   externalTrafficPolicy: Local
 
                    NEW:  externalTrafficPolicy: Cluster
 
 
 
 Apply the deploy.yaml file
-                 kubectl apply -f deploy.yaml
+
+```
+     kubectl apply -f deploy.yaml
+```
 
 To check if the ingress controller pods have started, run the following command:
 
@@ -335,8 +470,9 @@ To detect which version of the ingress controller is running, exec into the pod 
 
 Verify that the ingress-nginx Ingress Controller Service is Running as a Load Balancer Service. View the list of running services by entering:
 
-
-                get svc ingress-nginx-controller -n ingress-nginx   
+```
+      get svc ingress-nginx-controller -n ingress-nginx   
+```
 
 
 The output from the above command shows the EXTERNAL-IP for the ingress-nginx Service. Make note of the external ip
@@ -347,11 +483,11 @@ The output from the above command shows the EXTERNAL-IP for the ingress-nginx Se
 
 A TLS secret is used for SSL termination on the ingress controller. Output a new key to a file. For example, by entering:
 
-                openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=nginxsvc/O=nginxsvc"
+      openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=nginxsvc/O=nginxsvc"
 
 Create the TLS secret by entering: 
 
-                kubectl create secret tls tls-secret --key tls.key --cert tls.crt
+      kubectl create secret tls tls-secret --key tls.key --cert tls.crt
 
 ### Setting Up the Example Backend
 
@@ -406,7 +542,7 @@ Use the external IP address of the ingress-nginx service (for example, 129.146.2
 
 
 
-SET UP Web Application Firewall
+Set up Web Application Firewall (WAF)
 -------------------------------
 
 Before creating the WAF policy, you need to know the public IP address EXTERNALIP of the load balancer already been deployed for your Ingress resource (see above).
@@ -444,10 +580,10 @@ nslookup CNAME
 
 Example:
 
+```
 nslookup  fctfoke-com.o.waas.oci.oraclecloud.net
 
 Server:  fritz.box
-
 Address:  192.168.178.1
 
 Non-authoritative answer:
@@ -455,17 +591,13 @@ Non-authoritative answer:
 Name:    eu-switzerland.inregion.waas.oci.oraclecloud.net
 
 Addresses:  192.29.61.119
-
-                        192.29.56.104
-
-                        192.29.61.248
+            192.29.56.104
+            192.29.61.248
 
 Aliases:  fctfoke-com.o.waas.oci.oraclecloud.net
           tm.inregion.waas.oci.oraclecloud.net
-
-
-
 A real production environment would require a proper setup for DNS in OCI. 
+```
 
 Here will just resove the name locally, just to test the WAF settings.
 
@@ -527,8 +659,12 @@ If one or more Kubernetes network policies apply to a pod, then only the traffic
 
 Since this example has been designed and tested for a single-node cluster, pause all your k8s nodes (but one), using the commands:
 
-kubectl get nodes (see your nodes IPs)
-kubectl drain  10.0.111.219  --ignore-daemonsets=false
+`kubectl get nodes`
+
+ (see your nodes IPs)
+
+
+`kubectl drain  10.0.111.219  --ignore-daemonsets=false`
 
 Leave only one node active.
 
@@ -540,25 +676,25 @@ Hint: you may want to give a look at the manifests before applying them. You can
 
 
 
-cd REPO_ROOT/100-fr/k8s/calico
+`cd REPO_ROOT/100-fr/k8s/calico`
 
 
 
 Create stars namespace
 
-kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/manifests/00-namespace.yaml
+`kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/manifests/00-namespace.yaml`
 
 Create backend app and service in stars
 
-kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/manifests/02-backend.yaml
+`kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/manifests/02-backend.yaml`
 
 Create frontend app and service in stars
 
-kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/manifests/03-frontend.yaml
+`kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/manifests/03-frontend.yaml`
 
 Create client app and service in client namespace
 
-kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/manifests/04-client.yaml
+`kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/manifests/04-client.yaml`
 
 
 
@@ -575,17 +711,19 @@ Edit file - so that we can access the UI from any client - making the following 
   OLD   - port: 9001 
   NEW   - port: 80
 
-kubectl create -f  01-management-ui.yaml
+`kubectl create -f  01-management-ui.yaml`
 
 Wait for all the pods to enter Running state.
 
-kubectl get pods --all-namespaces 
+`kubectl get pods --all-namespaces `
 
 Get LoadBalancer external address EXTERNAL-IP
 
+```
 kubectl get svc -n management-ui
 NAME            TYPE           CLUSTER-IP    EXTERNAL-IP      PORT(S)        AGE
 management-ui   LoadBalancer   10.96.24.62   129.159.241.83   80:30002/TCP   60s
+```
 
 
 
@@ -607,6 +745,7 @@ The manifest denies all communication to all Pods.
 
 
 
+```
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
@@ -614,16 +753,17 @@ metadata:
 spec:
   podSelector:
     matchLabels: {}
+```
 
 
 
 We first apply it to the stars namespace.
 
-kubectl create -n stars -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/default-deny.yaml
+`kubectl create -n stars -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/default-deny.yaml`
 
 We hen apply it to the client namespace also.
 
-kubectl create -n client -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/default-deny.yaml
+`kubectl create -n client -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/default-deny.yaml`
 
 
 
@@ -635,13 +775,13 @@ Refresh the management UI (it may take up to 10 seconds for changes to be reflec
 
 Apply the following YAMLs to allow access from the management UI.
 
-kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/allow-ui.yaml
+`kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/allow-ui.yaml`
 
 Now management-ui Pods can access Pods in stars namespace
 
 
 
-kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/allow-ui-client.yaml
+`kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/allow-ui-client.yaml`
 
 With that, we now allowed management-ui Pods access to Pods in stars namespace
 
@@ -655,11 +795,11 @@ After a few seconds, refresh the UI - it should now show the Services, but they 
 
 Apply the backend-policy.yaml file to allow traffic from the frontend to the backend
 
-kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/backend-policy.yaml
+`kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/backend-policy.yaml`
 
 Finally, expose the frontend service to the client namespace
 
-kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/frontend-policy.yaml
+`kubectl create -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/frontend-policy.yaml`
 
 Refresh the Management UI.
 You can see that 
@@ -674,13 +814,13 @@ You can see that
 
 To restart the drained cluster nodes use the following command. Use your IP addresses.
 
-kubectl uncordon 10.0.111.219
+`kubectl uncordon 10.0.111.219`
 
 
 
 You can clean up by deleting all namespaces.
 
-kubectl delete ns client stars management-ui
+`kubectl delete ns client stars management-ui`
 
 
 
@@ -1025,8 +1165,6 @@ Paste the output from the previous command into your web browser and confirm tha
 
 ### Install addon tools/frameworks: Kiali dashboard, along with Prometheus, Grafana, and Jaeger.
 
-
-
 ```
 kubectl apply -f samples/addons
 
@@ -1106,7 +1244,9 @@ For this, we create destination rules, which maps pod labels to subsets, as the 
 kubectl apply -f samples/bookinfo/networking/destination-rule-all.yaml
 ```
 
-Then we create virtual services to select the proper subset, by name (v1)
+
+
+Then we create virtual services to select the proper subset, by name (v1). See the following snippet.
 
 ```
   spec: 
@@ -1130,7 +1270,6 @@ kubectl apply -f samples/bookinfo/networking/virtual-service-all-v1.yaml
 To visualize the objects we just created use these commands.
 
 ```
-
  kubectl get destinationrules -o yaml
  kubectl get virtualservices -o yaml
 ```
@@ -1139,6 +1278,8 @@ You can easily test the new configuration by once again refreshing the /productp
 
 
 Notice that the reviews part of the page displays with no rating stars, no matter how many times you refresh. This is because you configured Istio to route all traffic for the reviews service to the version reviews:v1 and this version of the service does not access the star ratings service.
+
+
 
 When you’re finished experimenting with the Bookinfo sample, uninstall and clean it up using the following instructions:
 
@@ -1156,7 +1297,6 @@ These are the steps to create the second layer, with a different VCN, Local Peer
 cd REPO-ROOT
 
 cd 200-core
-
 ```
 
 edit sec.auto.tfvars
@@ -1169,7 +1309,6 @@ edit sec.auto.tfvars
 
 ```
 export TFENV=dev
-
 export TFREGION=eu-frankfurt-1
 
 source  ~/.bashrc   // ALWAYS, after setting env variables
@@ -1197,16 +1336,16 @@ PLEASE DESTROY IN REVERSE ORDER
 
 
 
-200-core
+1. 200-core
 
-100-fr 
+2. 100-fr 
 
 
 
 The steps to clean up are:
 
 Go to repo root directory
-If needed, repeat initial Terraform setup, (env variables and init script sourcing)
+If needed, repeat initial Terraform setup, (env variables and init script sourcing), then enter:
 
 ```
 cd 200-core

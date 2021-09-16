@@ -13,7 +13,7 @@ The main elements covered are:
 
 - OKE Node Doctor
 
-- Deployment of a sample WordPress app, with access to OCI MySql Service
+- Deployment of a sample WordPress app, with access to OCI MySql Service, and wordpress logs setup in OCI Logging
 
 - Calico setup and sample NetworkPolicies test
 
@@ -21,7 +21,11 @@ The main elements covered are:
 
 - Web Application Firewall (WAF), for public load balancers protection
 
-- Istio Service Mesh installation and samples [PLANNED]
+- Istio Service Mesh installation and samples 
+  
+  
+  
+  
   
   
   

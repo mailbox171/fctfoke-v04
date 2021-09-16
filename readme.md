@@ -36,12 +36,13 @@ From Terraform point of view, we have two *components*
 
    200-core 
 
-They are arrenged in a LAYERED ARCHITECTURE, with 100-fr being the bottom layer
+They are arranged in a LAYERED ARCHITECTURE, with 100-fr being the bottom layer.
+
 Therefore, PLEASE CREATE IN ORDER, AND DESTROY IN REVERSE ORDER
 
-   Create      100-fr   -->  200-core
+   Create:        100-fr          -->     200-core
 
-   Destroy    200-core -->  100-fr    
+   Destroy:      200-core     -->     100-fr    
     
 
 ### Terraform VARIABLE SCOPES
@@ -49,7 +50,11 @@ Therefore, PLEASE CREATE IN ORDER, AND DESTROY IN REVERSE ORDER
 Each VCN is a component.
 Variables for each component are generally defined (variables.tf) and assigned (terraform.tfvars) in the component root directory.
 
-In addition, the following scopes can be used, setting values in the proper file (values will OVERRIDE what is in the root directory).
+In addition, the following scopes can be used, setting values in the proper file, located in the designated directory (values will OVERRIDE what is in the root directory).
+
+See the repo directory structure for reference.
+
+
 
 ```
 GLOBAL                        -var-file=./../g.tfvars
@@ -75,6 +80,8 @@ REGION                        -var-file=./../vars/regions/$TFREGION/r.tfvars
 
 ### Setup steps
 
+Fill with your values, as you need.
+
 ```
 export TFENV=dev
 
@@ -94,7 +101,7 @@ alias tplan="terraform plan -var-file=./../g.tfvars -var-file=./$TFENV/$TFREGION
 alias tapply="terraform apply  -var-file=./../g.tfvars -var-file=./$TFENV/$TFREGION/cer.tfvars -var-file=./$TFENV/ce.tfvars -var-file=./../vars/envs/$TFENV/e.tfvars -var-file=./../vars/regions/$TFREGION/r.tfvars"``
 ```
 
-
+Source updated file
 
 ```
 source ~/.bashrc
@@ -102,7 +109,7 @@ source ~/.bashrc
 
 ## 
 
-## Layer 100-FR Provisioning
+## Layer 100-FR provisioning
 
 ### Running Terraform
 
@@ -111,17 +118,17 @@ cd  repo-root  // wherever is on your machine
 cd 100-fr
 
 edit sec.auto.tfvars
-(see template file, set required variables values)
+(initialize from template file, then set required variables values)
 
 
 
 ```
 export TFENV=dev
-
 export TFREGION=eu-frankfurt-1
 
 source  ~/.bashrc   //ALWAYS source after updating env variables!
 ```
+
 
 Run Terraform now.
 
@@ -135,29 +142,36 @@ tapply
 Apply complete! Resources: 31 added, 0 changed, 0 destroyed.
 Outputs:
 (..)
-
 ```
 
 
 
 SAVE OUTPUT (may be useful later on), REPLACING CURRENT TIME IN FILE NAME
 
-terraform output > tf-output-TIME.txt
-
-(example: terraform output tf-output-202109100924.txt)
+terraform output > tf-output-*TIME*.txt
 
 
 
-Notice that an OCI MySql Service instance has been provisioned also.
+Example: 
+
+`terraform output tf-output-202109100924.txt`
+
+
+
+Notice that an OCI MySql Service instance has been provisioned also, by Terraform.
 
 
 
 ### Accessing the environment
 
-You can notice the output includes:
+You can notice that the output includes
+
 ssh_to_operator = "ssh -i ~/keys/ssh-key-2021-07-01.key -J opc@xxx.yyy.227.241 opc@zzz.www.0.6"
 
-SSH TO OPERATOR THROUGH BASTION
+
+
+Now ssh to operator VM through bastion 
+
 Insert "-o StrictHostKeyChecking=no" option in the above command. Your IP addresses will be different, of course.
 
 - BASTION Public IP
@@ -181,8 +195,9 @@ Are you sure you want to continue connecting (yes/no)? yes
 NAME           STATUS   ROLES   AGE   VERSION
 10.0.115.141   Ready    node    2d    v1.20.8
 10.0.119.225   Ready    node    2d    v1.20.8
-Make note of nodes IP ADRESSES
 ```
+
+Make note of worker nodes NAMES=IP ADRESSES
 
 
 
@@ -237,7 +252,7 @@ Name fctfoke-workernodes
 
 
 
-**Create policy**
+**Create a policy**
 
 Use nodepool compartment id.
 
@@ -252,7 +267,7 @@ Name allow-workers-to-log
 
 
 
-**Create log group**
+**Create a log group**
 
 Name fctfoke-lg
 
@@ -260,11 +275,15 @@ Name fctfoke-lg
 
 **Create log**
 
+We will create a custom log, to collect output from wordpress containers
+
+
+
 Name fctfoke-log
 
 Create new configuration
    Select dynamic group: fctfoke-workernodes
-   Log path:  `/var/log/containers/*`
+   Log path:  `/var/log/containers/wordpress*`
 
 
 
@@ -322,7 +341,7 @@ Go to K8S WORDPRESS manifest folder
 
 ### Apply k8s manifest files
 
-MySql external service
+Create MySql external service
 
 ```
 [opc@dev-operator wp]$ kubectl apply -f svc-mysql.yaml 
@@ -367,6 +386,10 @@ Create user and initialize WP site.
 
 
 
+Navigate the wordpress website, to generate some log records, to be shown later.
+
+
+
 **REMINDER**
 
 When destroyng this component, delete load balancer in k8s using kubectl, before terraform destroy. 
@@ -391,16 +414,28 @@ Select the OKE nodepool compartment
 
 Click on "fcoke-log" Log Name
 
-Explore the log items. You should see WordPress requests logged, like the following (truncated).
 
 
+Select the appropriate timeframe, depending on when you navigated on wordpress site.
+
+You should see the wordpress logging activity collected.
+
+
+
+![](C:\Users\FCOSTA\AppData\Roaming\marktext\images\2021-09-16-12-00-15-image.png)
+
+
+
+Explore the single log items. You should see payload like the following (truncated).
 
 ```
 {
   "datetime": 1631716205188,
   "logContent": {
     "data": {
-      "message": "2021-09-15T14:30:04.242933438+00:00 stdout F [2021-09-15T14:30:03.677Z] \"POST /wp-admin/admin-ajax.php HTTP/1.1\" 200 
+      "message": "2021-09-15T14:30:04.242933438+00:00 stdout F 
+       [2021-09-15T14:30:03.677Z] 
+       \"POST /wp-admin/admin-ajax.php HTTP/1.1\" 200 
 
 (..)
 
@@ -408,7 +443,7 @@ Explore the log items. You should see WordPress requests logged, like the follow
 
 
 
-### Ingress Controller sample components
+### Ingress Controller installation and sample deployment
 
 The ingress controller test installation comprises:
 
@@ -428,19 +463,19 @@ The hello-world backend test deployment comprises:
   
   
 
-### Setting Up the Example Ingress Controller
+### Setting up the NGINX Ingress Controller
 
-1. If you haven't already done so, follow the steps to set up the cluster's kubeconfig configuration file. 
-   
-          export KUBECONFIG=REPO-ROOT/100-fr/generated/kubeconfig
+If you haven't already done so, follow the steps to set up the cluster's kubeconfig configuration file env var, as an absolute path
 
-Creating the Service Account, and the Ingress Controller
+       export KUBECONFIG=REPO-ROOT/100-fr/generated/kubeconfig
 
-1. Run the following commands to create the nginx-ingress-controller ingress controller deployment, along with the Kubernetes RBAC roles and bindings. 
-   
-   First, download the manifest file.
-   
-           wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.0/deploy/static/provider/cloud/deploy.yaml
+ 
+
+Run the following commands to create the nginx-ingress-controller ingress controller deployment, along with the Kubernetes RBAC roles and bindings. 
+
+First, download the manifest file.
+
+        wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.0/deploy/static/provider/cloud/deploy.yaml
 
 Edit the file "deploy.yaml", changing the following line (to allow multi-node clusters):
 
@@ -475,9 +510,7 @@ Verify that the ingress-nginx Ingress Controller Service is Running as a Load Ba
 ```
 
 
-The output from the above command shows the EXTERNAL-IP for the ingress-nginx Service. Make note of the external ip
-
-
+The output from the above command shows the EXTERNAL-IP for the ingress-nginx Service. Make note of the EXTERNAL-IP
 
 ### Creating a TLS Secret.
 
@@ -494,22 +527,22 @@ Create the TLS secret by entering:
 In this section, you define a hello-world backend service and deployment.
 Create the new hello-world deployment and service on nodes in the cluster by running the following command:
 
-                kubectl apply -f hello-world-ingress.yaml
+      kubectl apply -f hello-world-ingress.yaml
 
 Using the Example Ingress Controller to Access the Example Backend
 In this section you create an ingress to access the backend using the ingress controller.
 
-                kubectl apply -f ingress-v1.yaml
+      kubectl apply -f ingress-v1.yaml
 
 Verify that the Example Components are Working as Expected.
 To confirm the ingress-nginx service is running as a LoadBalancer service, obtain its external IP address by entering:
 
-                kubectl get svc --all-namespaces
+     kubectl get svc --all-namespaces
 
 Sending cURL Requests to the Load Balancer
 Use the external IP address of the ingress-nginx service (for example, 129.146.214.219) to open a browser, or otherwise curl an http request by entering:
 
-                curl --trace -  http://<EXTERNALIP>
+      curl --trace -  http://<EXTERNALIP>
 
 One more Ingress example
 ------------------------
@@ -518,27 +551,27 @@ One more Ingress example
 
 Create a Deployment using the following command:
 
-                kubectl create deployment web --image=gcr.io/google-samples/hello-app:1.0
+      kubectl create deployment web --image=gcr.io/google-samples/hello-app:1.0
 
 Expose as service
 
-                kubectl expose deployment web --type=NodePort --port=8080
+      kubectl expose deployment web --type=NodePort --port=8080
 
 Create ingress resource
 
-                kubectl apply -f example-ingress.yaml
+       kubectl apply -f example-ingress.yaml
 
 Sending cURL Requests to the Load Balancer (Hello world)
 
 Use the same external IP address (adding the path /helloworld) of the ingress-nginx service (for example, 129.146.214.219) to open a browser, or otherwise curl an http request by entering:
 
-                curl --trace -  http://<EXTERNALIP>/helloworld
+      curl --trace -  http://<EXTERNALIP>/helloworld
 
 Check the / path still works (Hello webhook world)
 
 Use the external IP address of the ingress-nginx service (for example, 129.146.214.219) to open a browser, or otherwise curl an http request by entering:
 
-                curl --trace -  http://<EXTERNALIP>
+      curl --trace -  http://<EXTERNALIP>
 
 
 
@@ -554,25 +587,29 @@ If prompted, pick a compartment where the WAF policy should be created.
 Click Create WAF Policy.
 In the Create WAF Policy dialog box, enter the fields as follows:
 
-Policy Name                              fctfoke Policy
 
+
+```
+Policy Name                          fctfoke Policy
 Primary Domain                       fctkoke.com
+Additional Domains                   blank
+Origin Name                          fctfoke Load Balancer
+URI                                  EXTERNALIP // of Ingress LB service
 
-Additional Domains                 blank
-
-Origin Name                             fctfoke Load Balancer
-
-URI                                              EXTERNALIP // of Ingress LB service
-
+```
 
 
 Look in the policy OCI Console web page, at the top, for a message like
 
-    *Visit your DNS provider and add your CNAME fctfoke-com.o.waas.oci.oraclecloud.net to your domain's DNS configuration. Learn More*
+```Look
+  *Visit your DNS provider and add your CNAME fctfoke-com.o.waas.oci.oraclecloud.net to your domain's DNS configuration. Learn More*
+```
 
 Make note of the CNAME  (example "fctfoke-com.o.waas.oci.oraclecloud.net")
 
 Identify one (there may be several) network IP address for the CNAME.
+
+
 
 nslookup CNAME
 
@@ -596,8 +633,12 @@ Addresses:  192.29.61.119
 
 Aliases:  fctfoke-com.o.waas.oci.oraclecloud.net
           tm.inregion.waas.oci.oraclecloud.net
-A real production environment would require a proper setup for DNS in OCI. 
+
 ```
+
+
+
+A real production environment would require a proper setup for DNS in OCI. 
 
 Here will just resove the name locally, just to test the WAF settings.
 
@@ -630,9 +671,11 @@ You shuold be prompted with a CAPTCHA, which means the WAF is active.
 
 ## Network Policies with Calico
 
-Clusters you create with Container Engine for Kubernetes have flannel installed as the default CNI network provider.
+Clusters you create with Container Engine for Kubernetes have *flannel* installed as the default CNI network provider.
 
-Although flannel satisfies the requirements of the Kubernetes networking model, it does not support NetworkPolicy resources. If you want to enhance the security of clusters you create with Container Engine for Kubernetes by implementing network policies, you have to install and configure a network provider that does support NetworkPolicy resources. One such provider is Calico.
+Although flannel satisfies the requirements of the Kubernetes networking model, it does not support NetworkPolicy resources.
+
+If you want to enhance the security of clusters you create with Container Engine for Kubernetes by implementing network policies, you have to install and configure a network provider that does support NetworkPolicy resources. One such provider is *Calico*.
 
 Network policies lets developers secure access to and from their applications using the same simple language they use to deploy them. Developers can focus on their applications without diving into low-level networking concepts.
 
@@ -649,15 +692,15 @@ The Kubernetes Network Policy API supports the following features:
 
 
 **Defaults**
-If no Kubernetes network policies apply to a pod, then all traffic to/from the pod are allowed (default-allow). As a result, if you do not create any network policies, then all pods are allowed to communicate freely with all other pods. 
+If no Kubernetes network policies apply to a pod, then all traffic to/from the pod are allowed (<u>default-allow</u>). As a result, if you do not create any network policies, then all pods are allowed to communicate freely with all other pods. 
 
-If one or more Kubernetes network policies apply to a pod, then only the traffic specifically defined in that network policy are allowed (default-deny).
+If one or more Kubernetes network policies apply to a pod, then only the traffic specifically defined in that network policy are allowed (<u>default-deny</u>).
 
 
 
-### Running the stars example
+### Running the *stars* example
 
-Since this example has been designed and tested for a single-node cluster, pause all your k8s nodes (but one), using the commands:
+Since this example has been designed and tested for a single-node cluster, pause now all your k8s worker nodes (but one), using the commands:
 
 `kubectl get nodes`
 
@@ -666,12 +709,14 @@ Since this example has been designed and tested for a single-node cluster, pause
 
 `kubectl drain  10.0.111.219  --ignore-daemonsets=false`
 
-Leave only one node active.
+
+
+Leave <u>only one node</u> active.
 
 
 
 **Deploy Pods and Services**
-Hint: you may want to give a look at the manifests before applying them. You can quicly show them using the curl command.
+Hint: you may want to give a look at the manifests before applying them. You can quicly show them using the *curl* command.
 
 
 
@@ -717,6 +762,8 @@ Wait for all the pods to enter Running state.
 
 `kubectl get pods --all-namespaces `
 
+
+
 Get LoadBalancer external address EXTERNAL-IP
 
 ```
@@ -741,9 +788,7 @@ By default, any-to-any access is allowed, as monitored by the UI management cons
 **Set a deny-all default.**
 Running the following commands will prevent all access to the frontend, backend, and client Services.
 
-The manifest denies all communication to all Pods.
-
-
+The manifest denies all communications to all Pods.
 
 ```
 kind: NetworkPolicy
@@ -761,7 +806,9 @@ We first apply it to the stars namespace.
 
 `kubectl create -n stars -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/default-deny.yaml`
 
-We hen apply it to the client namespace also.
+
+
+We then apply it to the client namespace also.
 
 `kubectl create -n client -f https://docs.projectcalico.org/security/tutorials/kubernetes-policy-demo/policies/default-deny.yaml`
 
@@ -870,8 +917,6 @@ Need more information? Visit https://istio.io/latest/docs/setup/install/
 
 Explore directories
 
-
-
 ```
 ls
 istio-1.11.2
@@ -886,8 +931,6 @@ bin  LICENSE  manifests  manifest.yaml  README.md  samples  tools
 
 
 
-
-
 The installation directory contains:
 
 - Sample applications in samples/
@@ -897,8 +940,6 @@ The installation directory contains:
 
 
 Add the istioctl client to your path (Linux or macOS):
-
-
 
 ```
 export PATH=$PWD/bin:$PATH
@@ -910,13 +951,7 @@ No issues found when checking the cluster. Istio is safe to install or upgrade!
 
 ```
 
-
-
-
-
-For this installation, we use the demo configuration profile. It’s selected to have a good set of defaults for testing, but there are other profiles for production or performance testing.
-
-
+For this installation, we use the *demo* configuration profile. It’s selected to have a good set of defaults for testing, but there are other profiles for production or performance testing.
 
 ```
 istioctl install --set profile=demo -y
@@ -930,22 +965,17 @@ Thank you for installing Istio 1.11.  Please take a few minutes to tell us about
 
 ```
 
-
-
 Add a namespace label (to the deafult namespace) to instruct Istio to automatically inject Envoy sidecar proxies when you deploy your application later
 
 ```
 kubectl label namespace default istio-injection=enabled
 
 namespace/default labeled
-
 ```
 
 
 
 ### Deploy the Bookinfo sample application
-
-
 
 ```
 kubectl apply -f samples/bookinfo/platform/kube/bookinfo.yaml
@@ -982,8 +1012,6 @@ There are 3 versions of the reviews microservice:
 
 The application will start. As each pod becomes ready, the Istio sidecar will be deployed along with it, so that each pod reports 2/2 containers.
 
-
-
 ```
 kubectl get pods
 
@@ -997,11 +1025,11 @@ reviews-v3-84779c7bbc-6pslz       2/2     Running   0          7m35s
 
 ```
 
-
-
 Re-run the previous command and wait until all pods report READY 2/2 and STATUS Running before you go to the next step. This might take a few minutes depending on your platform.
 
-All services are internal ClusterIP so far.
+
+
+All services will be internal ClusterIP so far. See productpage among those.
 
 ```
 kubectl get services
@@ -1016,6 +1044,8 @@ reviews       ClusterIP   10.96.230.122   <none>        9080/TCP   5m33s
 
 
 ```
+
+
 
 Verify everything is working correctly up to this point. 
 Run this command to see if the app is running inside the cluster and serving HTML pages by checking for the page title in the response.
@@ -1033,20 +1063,18 @@ kubectl exec "$(kubectl get pod -l app=ratings -o jsonpath='{.items[0].metadata.
 
 The Bookinfo application is deployed but not accessible from the outside. To make it accessible, you need to create an Istio Ingress Gateway, which maps a path to a route at the edge of your mesh.
 
-We have already a productpage ClusterIP service exposed internally.
+We have seen we already have a productpage ClusterIP service exposed internally.
 
 
-1. We will create a bookinfo VirtualService to map requests with seected paths to the productpage service.
+1. We will create a *bookinfo* VirtualService to map requests with selected paths to the productpage service.
 
-2. The bookinfo VirtualService will be exposed externally thru the bookinfo-gateway
+2. The bookinfo VirtualService will be exposed externally thru the *bookinfo-gateway*
 
 
 The 2 new objects are both defined in the bookinfo-gateway.yaml file
 
-
-
 ```
-piVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
   name: bookinfo-gateway
@@ -1096,14 +1124,13 @@ spec:
 
 
 
-Apply the manifest file.
+Apply this manifest file.
 
 ```
 kubectl apply -f samples/bookinfo/networking/bookinfo-gateway.yaml
 
 gateway.networking.istio.io/bookinfo-gateway created
 virtualservice.networking.istio.io/bookinfo created
-
 ```
 
 
@@ -1118,6 +1145,8 @@ istio-ingressgateway   LoadBalancer   10.96.245.190   152.70.183.175   15021:308
 
 ```
 
+
+
 Follow these instructions to set the INGRESS_HOST and INGRESS_PORT variables for accessing the gateway, extracting the values from the json "get -o" descriptors
 
 ```
@@ -1125,6 +1154,8 @@ export INGRESS_HOST=$(kubectl -n istio-system get service istio-ingressgateway -
 export INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].port}')
 export SECURE_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="https")].port}')
 ```
+
+
 
 Check the values have been set.
 
@@ -1137,6 +1168,8 @@ INGRESS_HOST=152.70.183.175
 
 ```
 
+
+
 Set GATEWAY_URL
 
 ```
@@ -1147,6 +1180,8 @@ echo "$GATEWAY_URL"
 152.70.183.175:80
 
 ```
+
+
 
 Verify external access.
 
@@ -1207,7 +1242,7 @@ On the upper right, select "Last 1h", then refresh.
 
 The Kiali dashboard shows an overview of your mesh with the relationships between the services in the Bookinfo sample application. It also provides filters to visualize the traffic flow.
 
-Hit control-C in your terminal to close the dashboard
+Hit ctrl-C in your terminal to close the dashboard
 
 
 
@@ -1246,7 +1281,7 @@ kubectl apply -f samples/bookinfo/networking/destination-rule-all.yaml
 
 
 
-Then we create virtual services to select the proper subset, by name (v1). See the following snippet.
+Then we create virtual services to select - for the *review* service - the proper subset, by name (v1). See the following snippet.
 
 ```
   spec: 
@@ -1273,6 +1308,8 @@ To visualize the objects we just created use these commands.
  kubectl get destinationrules -o yaml
  kubectl get virtualservices -o yaml
 ```
+
+
 
 You can easily test the new configuration by once again refreshing the /productpage of the Bookinfo app.
 

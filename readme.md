@@ -1,9 +1,9 @@
 # FC Oracle OCI OKE Sample Architecture
 
-This repo is the result of a self-training hands-on exercise.
-It contains scripts, additional configurations and instructions to set up an OKE (Oracle Kubernetes Engine) environment, with some additional services, features, and sample deployments.
+- This repo is the result of a self-training hands-on exercise.
+  It contains scripts, additional configurations and instructions to set up an OKE (Oracle Kubernetes Engine) environment, with some additional services, features, and sample deployments.
 
-The main elements covered are:
+- The main elements covered are:
 
 - Two VCNs (Local Peering established), each with an OKE cluster
 
@@ -13,7 +13,7 @@ The main elements covered are:
 
 - OKE Node Doctor
 
-- Deployment of a sample WordPress app, with access to OCI MySql Service, and wordpress logs setup in OCI Logging
+- Deployment of a sample WordPress app, with access to OCI MySql Service, PV block storage, wordpress logs setup in OCI Logging
 
 - Calico setup and sample NetworkPolicies test
 
@@ -21,14 +21,17 @@ The main elements covered are:
 
 - Web Application Firewall (WAF), for public load balancers protection
 
-- Istio Service Mesh installation and samples 
-  
-  
-  
-  
-  
-  
-  
+- Istio Service Mesh installation and samples
+
+- Pod autoscaler (planned)
+
+- OCI Vault secrets (planned)
+
+- Cluster autoscaler (planned)
+
+
+
+
 
 ## Setting up with Terraform
 

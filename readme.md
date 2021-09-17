@@ -23,7 +23,7 @@ The main elements covered are:
 
 - Istio Service Mesh installation and samples
 
-- Metrics server and HPA Pod autoscaler
+- Metrics server and HPA Pod autoscaler (planned)
 
 - OCI Vault secrets (planned)
 
@@ -483,8 +483,6 @@ First, download the manifest file.
         wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.0/deploy/static/provider/cloud/deploy.yaml
 
 Edit the file "deploy.yaml", changing the following line (to allow multi-node clusters):
-
-
 
 
                    OLD:   externalTrafficPolicy: Local

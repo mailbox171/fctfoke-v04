@@ -1,13 +1,13 @@
 # FC Oracle OCI OKE Sample Architecture
 
-- This repo is the result of a self-training hands-on exercise.
-  It contains scripts, additional configurations and instructions to set up an OKE (Oracle Kubernetes Engine) environment, with some additional services, features, and sample deployments.
+This repo is the result of a self-training hands-on exercise.
+It contains scripts, additional configurations and instructions to set up an OKE (Oracle Kubernetes Engine) environment, with some additional services, features, and sample deployments.
 
-- The main elements covered are:
+The main elements covered are:
 
-- Two VCNs (Local Peering established), each with an OKE cluster
+- Two VCNs (Local Peering established), each one with its own an OKE cluster
 
-- Simple arrangement of the Terraform variable assignments, based on directories and environment variables, to be able to provision different environments (dev, test, prod), in different regions.
+- Simple arrangement of the Terraform variable assignments, based on directories and environment variables, to be able to provision different environments (dev, test, prod), in different OCI regions.
 
 - Bastion VM and convenience Operator VM for cluster access.
 
@@ -23,7 +23,7 @@
 
 - Istio Service Mesh installation and samples
 
-- Pod autoscaler (planned)
+- Metrics server and HPA Pod autoscaler
 
 - OCI Vault secrets (planned)
 
@@ -37,7 +37,7 @@
 
 ### Components
 
-From Terraform point of view, we have two *components*
+From Terraform point of view, we have two *components* 
 
    100-fr
 
@@ -120,12 +120,16 @@ source ~/.bashrc
 
 ### Running Terraform
 
-cd  repo-root  // wherever is on your machine
+```
+cd  REPO-ROOT  // wherever has been cloned, on your machine
 
 cd 100-fr
+```
 
-edit sec.auto.tfvars
-(initialize from template file, then set required variables values)
+
+
+edit sec.auto.tfvars file
+(initialize from template file "sec.tfvars.template", then set required variables values)
 
 
 
@@ -425,15 +429,9 @@ Click on "fcoke-log" Log Name
 
 Select the appropriate timeframe, depending on when you navigated on wordpress site.
 
-You should see the wordpress logging activity collected.
+You should see the wordpress logging activity collected. Browse the log entries.
 
-
-
-![](C:\Users\FCOSTA\AppData\Roaming\marktext\images\2021-09-16-12-00-15-image.png)
-
-
-
-Explore the single log items. You should see payload like the following (truncated).
+Explore the single log items. You should see payloads like the following (truncated).
 
 ```
 {
@@ -487,6 +485,8 @@ First, download the manifest file.
 Edit the file "deploy.yaml", changing the following line (to allow multi-node clusters):
 
 
+
+
                    OLD:   externalTrafficPolicy: Local
 
                    NEW:  externalTrafficPolicy: Cluster
@@ -501,14 +501,14 @@ Apply the deploy.yaml file
 
 To check if the ingress controller pods have started, run the following command:
 
-                 kubectl get pods -n ingress-nginx \
+         kubectl get pods -n ingress-nginx \
                       -l app.kubernetes.io/name=ingress-ng
 
 To detect which version of the ingress controller is running, exec into the pod and run nginx-ingress-controller --version.
 
-                 POD_NAMESPACE=ingress-nginx
-                 POD_NAME=$(kubectl get pods -n $POD_NAMESPACE -l app.kubernetes.io/name=ingress-nginx --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')
-                 kubectl exec -it $POD_NAME -n $POD_NAMESPACE -- /nginx-ingress-controller --version
+         POD_NAMESPACE=ingress-nginx
+         POD_NAME=$(kubectl get pods -n $POD_NAMESPACE -l app.kubernetes.io/name=ingress-nginx --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')
+         kubectl exec -it $POD_NAME -n $POD_NAMESPACE -- /nginx-ingress-controller --version
 
 Verify that the ingress-nginx Ingress Controller Service is Running as a Load Balancer Service. View the list of running services by entering:
 
@@ -586,6 +586,12 @@ Set up Web Application Firewall (WAF)
 -------------------------------
 
 Before creating the WAF policy, you need to know the public IP address EXTERNALIP of the load balancer already been deployed for your Ingress resource (see above).
+
+
+
+<u>Note: The load balancer has been created in the designated "xxx-pub-lb" public subnet.  Since we set "*waf_enabled=true*" at provisioning time, traffic to all public load balancer must go through WAF. This is accomplished setting the appropriate Ingress Rules for the subnet. You can see them in the OCI Console, they have a Description like "allow public ingress only from WAF CIDR blocks".</u>
+
+
 
 To secure your application using WAF, first, you need to create a WAF policy.
 

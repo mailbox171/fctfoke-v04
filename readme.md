@@ -462,7 +462,7 @@ Explore the single log items. You should see payloads like the following (trunca
 
 ## Accessing OCI Container Registry (OCIR)
 
-If necessary, register on Dockerhub: https://hub.docker.com/.
+If you don' have an account, register on Dockerhub: https://hub.docker.com/.
 Have your credentials ready.
 
 ### Create a repository in OCIR
@@ -601,7 +601,7 @@ fc02: digest: sha256:f7f0ad0c1d962c444fbdc9d0cf22a06f9e457006c02103983169ca001ba
 
 ```
 
-## Deploy the custom nginx image
+## Deploy your customized nginx image
 
 Using two manifests .yaml files we have in the current directory, we deploy the new image, and we expose it using a LoadBalancer service. 
 

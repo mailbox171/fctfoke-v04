@@ -740,7 +740,7 @@ What follows is an example of enabling Horizontal Pod Autoscaler for the php-apa
 
 
 
-Start a deployment running the image and expose it as a service.
+Start a deployment running the image and expose it as a service. You may download the manifest and browse it using *curl*.
 
 ```
 kubectl apply -f https://k8s.io/examples/application/php-apache.yaml

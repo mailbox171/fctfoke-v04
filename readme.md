@@ -1,7 +1,9 @@
 # FC Oracle OCI OKE Sample Architecture
 
-This repo is the result of a self-training hands-on exercise.
+This repository is the result of a self-training hands-on exercise.
 It contains scripts, additional configurations and instructions to set up an OKE (Oracle Kubernetes Engine) environment, with some additional services, features, and sample deployments.
+
+
 
 The main elements covered are:
 
@@ -15,15 +17,17 @@ The main elements covered are:
 
 - Deployment of a sample WordPress app, with access to OCI MySql Service, PV block storage, wordpress logs setup in OCI Logging
 
+- Access to OCI Container Registry for image download
+
+- Metrics server and HPA Pod autoscaler
+
 - Calico setup and sample NetworkPolicies test
 
 - Nginx Ingress Controller setup and samples
 
-- Web Application Firewall (WAF), for public load balancers protection
+- Web Application Firewall (WAF), for public load balancers protection 
 
 - Istio Service Mesh installation and samples
-
-- Metrics server and HPA Pod autoscaler (planned)
 
 - OCI Vault secrets (planned)
 
@@ -82,6 +86,12 @@ ENVIRONMENT                   -var-file=./../vars/envs/$TFENV/e.tfvars
 ```
 REGION                        -var-file=./../vars/regions/$TFREGION/r.tfvars
 ```
+
+
+
+Note:
+
+If you want to try WAF (Web Application Firewal), enable the *waf_enabled* property in `./../g.tfvars` file. Take into accont that - with this choice -  **all**  your public balancers that you will be creating (as LoadBalancer or Ingress resource) will <u>need</u> to be exposed thru WAF, setting up the necessary configuration (see WAF paragraph below).
 
 
 
@@ -165,7 +175,7 @@ terraform output > tf-output-*TIME*.txt
 
 Example: 
 
-`terraform output tf-output-202109100924.txt`
+`terraform output > tf-output-202109100924.log`
 
 
 
@@ -448,6 +458,357 @@ Explore the single log items. You should see payloads like the following (trunca
 
 
 
+
+
+## Accessing OCI Container Registry (OCIR)
+
+If necessary, register on Dockerhub: https://hub.docker.com/.
+Have your credentials ready.
+
+### Create a repository in OCIR
+
+On the operator VM, move to *ocir* directory within the repo.
+
+```
+cd REPO-ROOT/100-fr/k8s/ocir 
+```
+
+Still working for convenience from your operator VM (oci client libraries are installed for you), create an OCI container repository named *project01/nginx*.
+The compartment-id must the one you have been using all along.
+
+```
+oci artifacts container repository create --display-name project01/nginx --compartment-id ocid1.compartment.oc1..xxxxxxxxxxx
+
+
+{
+  "data": {
+    "billable-size-in-gbs": 0,
+    "compartment-id": "ocid1.compartment.oc1..xxxxxxxxxx",
+    "created-by": "ocid1.instance.oc1.eu-frankfurt-1.xxxxxxxxxxxxxx",
+    "display-name": "project01/nginx",
+    "id": "ocid1.containerrepo.oc1.eu-frankfurt-1.0.xxxxxxxxxxxxxx",
+    "image-count": 0,
+    "is-immutable": false,
+    "is-public": false,
+    "layer-count": 0,
+    "layers-size-in-bytes": 0,
+    "lifecycle-state": "AVAILABLE",
+    "readme": null,
+    "time-created": "2021-09-19T10:49:32.769000+00:00",
+    "time-last-pushed": null
+  }
+}
+```
+
+You may look at the new registry in OCI console, if you wish.
+
+OCI Console:  Containers & Artifacts >> Container Registry >> Select container
+
+
+
+### Install Docker on operator VM
+
+```
+sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+sudo yum install docker-ce docker-ce-cli containerd.io
+sudo systemctl start docker
+sudo systemctl enable docker
+
+sudo chmod 666 /var/run/docker.sock
+
+```
+
+
+
+Login using your Dockerhub credentials, and try downloading nginx image
+
+```
+docker login
+docker pull nginx
+```
+
+
+
+### Login to OCIR
+
+Get a OCIR Auth Token (if you don't have one already).
+
+- In the top-right corner of the Console, open the Profile menu (User menu icon) and then click User Settings to view the details.
+
+- On the Auth Tokens page, click Generate Token.
+
+- Enter a friendly description for the auth token. Avoid entering confidential information.
+
+- Click Generate Token. The new auth token is displayed.
+
+- Copy the auth token immediately to a secure location from where you can retrieve it later, because you won't see the auth token again in the Console.
+
+- Close the Generate Token dialog.
+
+
+
+We are now ready to login to OCIR, using the following *docker login* command.
+
+**Username:**
+Enter your username in the format `<tenancy-namespace>/<username>`, where `<tenancy-namespace>` is the auto-generated Object Storage namespace string of your tenancy (as shown on the Tenancy Details page of the OCI Console >> Object Storage Settings pane >> Object Storage Namespace).
+
+**Password:**
+Use your Auth Token (see above).
+
+```
+docker login -u 'frrufake1wgd/oracleidentitycloudservice/francesco.costa@oracle.com'  -p 'm>X)Eu{z:*FAKE*Y0T5M'  fra.ocir.io
+```
+
+
+
+Create a secret resource in kubernetes, with your OCIR credentials
+
+```
+ 
+kubectl create secret docker-registry fctfoke-ocirsecret --docker-server=fra.ocir.io --docker-username='frrufake1wgd/oracleidentitycloudservice/francesco.costa@oracle.com' --docker-password='m>X)Eu{z*FAKE*BY0T5M'  --docker-email='francesco.costa@oracle.com'
+ 
+secret/fctfoke-ocirsecret created
+```
+
+
+
+### Build the image
+
+In the current *ocir* directory, you find two files, which we can use to build a customized nginx image, so that the home page will greet you with a customized message.
+
+   Dockerfile
+   index.html
+
+
+
+Let's build our image, tagged for OCIR; then we can push it to our new repository.
+
+```
+docker build - -t fra.ocir.io/frrufake1wgd/project01/nginx:fc02 .
+docker push fra.ocir.io/frrufake1wgd/project01/nginx:fc02
+
+
+The push refers to repository [fra.ocir.io/frrufake1wgd/project01/nginx]
+966f4f5a2418: Pushed 
+fac15b2caa0c: Layer already exists 
+f8bf5746ac5a: Layer already exists 
+d11eedadbd34: Layer already exists 
+797e583d8c50: Layer already exists 
+bf9ce92e8516: Layer already exists 
+d000633a5681: Layer already exists 
+fc02: digest: sha256:f7f0ad0c1d962c444fbdc9d0cf22a06f9e457006c02103983169ca001ba0f56d size: 1777
+
+
+```
+
+## Deploy the custom nginx image
+
+Using two manifests .yaml files we have in the current directory, we deploy the new image, and we expose it using a LoadBalancer service. 
+
+Notice that the deployment uses the image "fra.ocir.io/frrudica1wgd/project01/nginx:fc02" we just built and uploaded.
+
+```
+kubectl apply -f fcdeployment.yaml
+
+kubectl apply -f fcservice.yaml 
+```
+
+
+
+Get the new LoadBalancer EXTERNAL-IP (if needed, wait for it to be assigned)
+
+```
+kubectl get svc
+NAME           TYPE           CLUSTER-IP   EXTERNAL-IP      PORT(S)        AGE
+fc-nginx-svc   LoadBalancer   10.96.25.9   152.70.173.212   80:31029/TCP   49m
+kubernetes     ClusterIP      10.96.0.1    <none>           443/TCP        110m
+
+
+```
+
+
+
+Show the nginx welcome page in a browser, going to: http://EXERNAL-IP.
+
+You should see "our" greeting: 
+
+                    "*Hello from FCTFOKE Nginx container*"
+
+
+
+## Horizontal Pod Autoscaler
+
+The OKE cluster has been generated with *metrics-server* enabled, which enables the Horizontal Pod Autoscaler capabilities.
+
+To check that the metrcs-server is active, type the following command.
+
+```
+kubectl get --raw "/apis/metrics.k8s.io/v1beta1/nodes"
+```
+
+The result is in raw text format.
+Indenting for better readability, should be something like the following.
+
+```
+{
+   "kind":"NodeMetricsList",
+   "apiVersion":"metrics.k8s.io/v1beta1",
+   "metadata":{
+
+   },
+   "items":[
+      {
+         "metadata":{
+            "name":"10.0.126.183",
+            "creationTimestamp":"2021-09-18T10:23:53Z",
+            "labels":{
+               "beta.kubernetes.io/arch":"amd64",
+               "beta.kubernetes.io/instance-type":"VM.Standard.E3.Flex",
+               "beta.kubernetes.io/os":"linux",
+               "displayName":"oke-csptxf3g7sa-nvi5vcjerka-smggtdmh3iq-0",
+               "failure-domain.beta.kubernetes.io/region":"eu-frankfurt-1",
+               "failure-domain.beta.kubernetes.io/zone":"EU-FRANKFURT-1-AD-1",
+               "hostname":"oke-csptxf3g7sa-nvi5vcjerka-smggtdmh3iq-0",
+               "internal_addr":"10.0.126.183",
+               "kubernetes.io/arch":"amd64",
+               "kubernetes.io/hostname":"10.0.126.183",
+               "kubernetes.io/os":"linux",
+               "node-role.kubernetes.io/node":"",
+               "node.info.ds_proxymux_client":"true",
+               "node.info/compartment.id_prefix":"ocid1.compartment.oc1",
+               "node.info/compartment.id_suffix":"aaaaaaaawb5bs2tee5hxwyor7evurum3voo6eq5ub73a3fpxvuv4q5zmckra",
+               "node.info/compartment.name":"francesco.costa",
+               "node.info/kubeletVersion":"v1.20",
+               "oci.oraclecloud.com/fault-domain":"FAULT-DOMAIN-1",
+               "oke.oraclecloud.com/node.info.private_subnet":"true",
+               "oke.oraclecloud.com/node.info.private_worker":"true",
+               "oke.oraclecloud.com/tenant_agent.version":"1.37.0-a82dece76a-549"
+            }
+         },
+         "timestamp":"2021-09-18T10:23:35Z",
+         "window":"20s",
+         "usage":{
+            "cpu":"86342094n",
+            "memory":"865924Ki"
+         }
+      },
+      {
+         "metadata":{
+            "name":"10.0.126.91",
+            "creationTimestamp":"2021-09-18T10:23:53Z",
+            "labels":{
+               "beta.kubernetes.io/arch":"amd64",
+               "beta.kubernetes.io/instance-type":"VM.Standard.E3.Flex",
+               "beta.kubernetes.io/os":"linux",
+               "displayName":"oke-csptxf3g7sa-nvi5vcjerka-smggtdmh3iq-1",
+               "failure-domain.beta.kubernetes.io/region":"eu-frankfurt-1",
+               "failure-domain.beta.kubernetes.io/zone":"EU-FRANKFURT-1-AD-2",
+               "hostname":"oke-csptxf3g7sa-nvi5vcjerka-smggtdmh3iq-1",
+               "internal_addr":"10.0.126.91",
+               "kubernetes.io/arch":"amd64",
+               "kubernetes.io/hostname":"10.0.126.91",
+               "kubernetes.io/os":"linux",
+               "node-role.kubernetes.io/node":"",
+               "node.info.ds_proxymux_client":"true",
+               "node.info/compartment.id_prefix":"ocid1.compartment.oc1",
+               "node.info/compartment.id_suffix":"aaaaaaaawb5bs2tee5hxwyor7evurum3voo6eq5ub73a3fpxvuv4q5zmckra",
+               "node.info/compartment.name":"francesco.costa",
+               "node.info/kubeletVersion":"v1.20",
+               "oci.oraclecloud.com/fault-domain":"FAULT-DOMAIN-2",
+               "oke.oraclecloud.com/node.info.private_subnet":"true",
+               "oke.oraclecloud.com/node.info.private_worker":"true",
+               "oke.oraclecloud.com/tenant_agent.version":"1.37.0-a82dece76a-549"
+            }
+         },
+         "timestamp":"2021-09-18T10:23:35Z",
+         "window":"20s",
+         "usage":{
+            "cpu":"62223230n",
+            "memory":"904980Ki"
+         }
+      }
+   ]
+}
+
+```
+
+
+
+Horizontal Pod Autoscaler can automatically scale the number of Pods in a replication controller, deployment, replica set or stateful set based on observed CPU utilization (or, with beta support in apiVersion: autoscaling/v2beta2, on some other application-provided metrics).
+
+What follows is an example of enabling Horizontal Pod Autoscaler for the php-apache server [see https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/] using a custom docker image based on the php-apache image, with an index.php page which performs some CPU intensive computations.
+
+
+
+Start a deployment running the image and expose it as a service.
+
+```
+kubectl apply -f https://k8s.io/examples/application/php-apache.yaml
+deployment.apps/php-apache created
+service/php-apache created
+```
+
+
+
+Now that the php-server server is running, we will create the autoscaler using the "kubectl autoscale" command. We could also apply a manifest file.
+
+
+The following command will create a Horizontal Pod Autoscaler that maintains between 1 and 10 replicas of the Pods controlled by the php-apache deployment.
+Roughly speaking, HPA will increase and decrease the number of replicas (via the deployment) to maintain an average CPU utilization across all Pods of 50%.
+Since each pod requests 200 milli-cores by kubectl run, this means average CPU usage of 100 milli-cores. 
+
+```
+kubectl autoscale deployment php-apache --cpu-percent=50 --min=1 --max=10
+horizontalpodautoscaler.autoscaling/php-apache autoscaled
+
+kubectl get hpa
+
+NAME         REFERENCE               TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+php-apache   Deployment/php-apache   0%/50%    1         10        1          27s
+
+```
+
+Please note that the current CPU consumption is 0%, as we are not sending any requests to the server (the TARGET column shows the average across all the pods controlled by the corresponding deployment).
+
+
+
+Now, we will see how the autoscaler reacts to increased load. We will start a container, and send an infinite loop of queries to the php-apache service (please <u>run it in a different terminal</u>).
+
+```
+kubectl run -i --tty load-generator --rm --image=busybox --restart=Never -- /bin/sh -c "while sleep 0.01; do wget -q -O- http://php
+```
+
+The CPU consumption will start growing.
+Wait few minutes, monitoring the HPA.
+The Replica will start growing in number, to lower the CPU below 50%.
+The number should settle around 7-8.
+
+```
+[opc@dev-operator ~]$ kubectl get hpa
+NAME         REFERENCE               TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+php-apache   Deployment/php-apache   42%/50%   1         10        8          13m
+[opc@dev-operator ~]$ kubectl get hpa
+NAME         REFERENCE               TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+php-apache   Deployment/php-apache   42%/50%   1         10        8          13m
+[opc@dev-operator ~]$ kubectl get hpa
+NAME         REFERENCE               TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+php-apache   Deployment/php-apache   42%/50%   1         10        8          13m
+[opc@dev-operator ~]$ kubectl get hpa
+NAME         REFERENCE               TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+php-apache   Deployment/php-apache   42%/50%   1         10        8          13m
+[opc@dev-operator ~]$ kubectl get hpa
+NAME         REFERENCE               TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+php-apache   Deployment/php-apache   42%/50%   1         10        8          13m
+```
+
+
+
+Finish the example by stopping the user load, by typing  Ctrl-C.
+
+Then we can verify the result state (after a minute or so), and chack that the number of replicas is back to 1.
+
+
+
 ### Ingress Controller installation and sample deployment
 
 The ingress controller test installation comprises:
@@ -582,6 +943,10 @@ Use the external IP address of the ingress-nginx service (for example, 129.146.2
 
 Set up Web Application Firewall (WAF)
 -------------------------------
+
+**This section requires that the variable *waf_enabled* has been set to true for the Terraform scripts (see note above).** **Skip the paragraph, if this has not been set.**
+
+
 
 Before creating the WAF policy, you need to know the public IP address EXTERNALIP of the load balancer already been deployed for your Ingress resource (see above).
 

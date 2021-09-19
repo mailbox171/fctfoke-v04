@@ -1,6 +1,7 @@
 module "oke" {
   source  = "oracle-terraform-modules/oke/oci"
-  version = "3.2.0"
+  #version = "3.2.0"
+  version="3.3.0"
 
   #KUBERNETES VERSION
   kubernetes_version=var.kubernetes_version
@@ -86,6 +87,8 @@ module "oke" {
 
   #CALICO
   calico_enabled = var.calico_enabled
-  
+ 
+  #METRICS SERVER
+  metricserver_enabled = var.metricserver_enabled 
 
 }

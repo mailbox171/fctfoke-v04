@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fc-nginx-deployment
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 2 # tells deployment to run 2 pods matching the template
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: fra.ocir.io/frrudica1wgd/project01/nginx:fc02
+        ports:
+        - containerPort: 80
+      imagePullSecrets:
+      - name: fctfoke-ocirsecret

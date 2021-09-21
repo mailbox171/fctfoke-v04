@@ -35,7 +35,11 @@ The main elements covered are:
 
 ## Setting up with Terraform
 
-### Components
+
+<details>
+   <summary>OCI Architecture layers</summary>
+
+
 
 From Terraform point of view, we have two *components* 
 
@@ -49,9 +53,14 @@ Therefore, PLEASE CREATE IN ORDER, AND DESTROY IN REVERSE ORDER
 
    Create:        100-fr          -->     200-core
 
-   Destroy:      200-core     -->     100-fr    
-
-### Terraform variable scopes
+   Destroy:      200-core     -->     100-fr  
+   
+   
+</details>   
+   
+<details>
+   <summary>Terraform variable scopes</summary>
+ 
 
 Each VCN is a component.
 Variables for each component are generally defined (variables.tf) and assigned (terraform.tfvars) in the component root directory.
@@ -86,7 +95,12 @@ If you want to try WAF (Web Application Firewal), please enable the *waf_enabled
 
 Take into accont that - with this choice -  **all**  the public balancers that you will be creating (as LoadBalancer or Ingress resource) will <u>need</u> to be exposed thru WAF, setting up the necessary configuration (see WAF paragraph below).
 
-### Setup steps
+
+</details>   
+   
+<details>
+   <summary>Setup steps</summary>
+ 
 
 Fill with your values for environment and region, as needed.
 
@@ -117,9 +131,21 @@ source ~/.bashrc
 
 ## 
 
-## Layer 100-FR provisioning
 
-### Running Terraform
+</details>   
+   
+ 
+ 
+
+## Provisioning the first layer, with VCN and OKE
+
+
+
+   
+   
+<details>
+   <summary>Running Terraform</summary>
+ 
 
 ```
 cd  REPO-ROOT  // wherever it has been cloned on your machine
@@ -161,7 +187,14 @@ Example:
 
 Notice that an OCI MySql Service instance has been provisioned also, by Terraform.
 
-### Accessing the environment
+
+
+</details>   
+   
+<details>
+   <summary>Accessing the environment</summary>
+ 
+
 
 You can notice that the output includes
 
@@ -181,9 +214,14 @@ ssh -o StrictHostKeyChecking=no  -i ~/keys/ssh-key-2021-07-01.key -J opc@130.61.
 Are you sure you want to continue connecting (yes/no)? yes
 ```
 
-### 
 
-### Test KUBECTL connection
+
+</details>   
+   
+<details>
+   <summary>Test kubectl connection</summary>
+ 
+ 
 
 ```
 [opc@dev-operator ~]$ kubectl get nodes
@@ -197,8 +235,14 @@ Make note of worker nodes NAMES=IP ADRESSES
 
 If you want to enable kubectl autocompletion, you find instructions here [bash auto-completion on Linux | Kubernetes](https://kubernetes.io/docs/tasks/tools/included/optional-kubectl-configs-bash-linux/)
 
-Run Node Doctor
----------------
+
+
+</details>   
+   
+<details>
+   <summary>Run Node Doctor</summary>
+ 
+ 
 
 Login to a node through BASTION host (your addresses will differ).
 
@@ -218,7 +262,22 @@ sudo /usr/local/bin/node-doctor.sh --check
 sudo /usr/local/bin/node-doctor.sh --generate
 ```
 
+
+</details>   
+   
+ 
+ 
+
+
 ## Set up OCI Logging for containers
+
+
+
+   
+   
+<details>
+   <summary>Check agent</summary>
+ 
 
 In OCI console, check agent for oke workers:
 
@@ -230,6 +289,13 @@ Click the oke worker node instance that you're interested in.
 Click the Oracle Cloud Agent tab.
 
 Confirm that the Compute Instance Monitoring plugin is enabled, and all plugins are running.
+
+
+</details>   
+   
+<details>
+   <summary>Create log</summary>
+ 
 
 **Create a dynamic group**
 Use nodepool compartment id.
@@ -264,11 +330,24 @@ Name fctfoke-log
 Create new configuration
    Select dynamic group: fctfoke-workernodes
    Log path:  `/var/log/containers/wordpress*`
+   
+   
+We wil check this log out later on.
 
-Deploy WORDPRESS, connect to MySQL Service
---------------------------
+</details> 
 
-### Create *polls* schema within MySQL SERVICE DB
+
+## Deploy WORDPRESS, connect to MySQL Service
+
+
+
+
+   
+   
+<details>
+   <summary>Create schema</summary>
+ 
+Create a new schema within MySQL SERVICE DB
 
 Still working on the operator VM, install mysql
 
@@ -297,7 +376,14 @@ Query OK, 1 row affected (0.0038 sec)
 \quit
 ```
 
-### Clone this github repo on the operator VM
+
+
+</details>   
+   
+<details>
+   <summary>Clone repo</summary>
+ 
+Clone this github repo on the operator VM
 
 ```
 git clone https://REPO-URL`
@@ -307,7 +393,14 @@ Go to K8S WORDPRESS manifest folder
 
 `cd REPO-ROOT/100-fr/k8s/wp/`
 
-### Apply k8s manifest files
+
+
+</details>   
+   
+<details>
+   <summary>Apply k8s manifest files</summary>
+ 
+ 
 
 Create MySql external service resource
 
@@ -328,7 +421,13 @@ persistentvolumeclaim/wp-pv-claim created
 deployment.apps/wordpress created
 ```
 
-### Test WORDPRESS
+
+
+</details>   
+   
+<details>
+   <summary>Test WordPress</summary>
+ 
 
 Check services, wait for EXTERNAL-IP (may be 'pending' for a while)
 
@@ -363,7 +462,14 @@ If you forget, you can also delete the LB using OCI console
 
 Then, you need to run "terraform destroy" again, using "tdestroy" alias.
 
-### Check container logs in OCI Logging
+
+
+</details>   
+   
+<details>
+   <summary>Check container logs in OCI Logging</summary>
+ 
+
 
 In OCI Console, select Observability >> Logs
 
@@ -389,12 +495,20 @@ Explore the single log items. You should see payloads like the following (trunca
 (..)
 ```
 
+</details>
+
+
 ## Accessing OCI Container Registry (OCIR)
 
-If you don' have an account, register on Dockerhub: https://hub.docker.com/.
+We will see how to keep images for our deployment on OCI Container Registry.<br>
+Note: If you don't have an account, please register on      Dockerhub (https://hub.docker.com).<br>
 Have your credentials ready.
 
-### Create a repository in OCIR
+<details>
+<summary>Repository creation</summary>
+
+
+
 
 On the operator VM, move to *ocir* directory within the repo.
 
@@ -433,7 +547,12 @@ You may look at the new registry in OCI console, if you wish.
 
 OCI Console:  Containers & Artifacts >> Container Registry >> Select container
 
-### Install Docker on operator VM
+</details>
+
+<details>
+<summary>Install Docker on operator VM</summary>
+
+ 
 
 ```
 sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
@@ -451,7 +570,10 @@ docker login
 docker pull nginx
 ```
 
-### Login to OCIR
+</details>
+
+<details>
+<summary>Set up OCIR secret</summary>
 
 Get a OCIR Auth Token (if you don't have one already).
 
@@ -487,7 +609,12 @@ kubectl create secret docker-registry fctfoke-ocirsecret --docker-server=fra.oci
 secret/fctfoke-ocirsecret created
 ```
 
-### Build the image
+ 
+
+</details>
+
+<details>
+<summary>Build the customized image</summary>
 
 In the current *ocir* directory, you find two files, which we can use to build a customized nginx image, so that the home page will greet you with a customized message.
 
@@ -512,7 +639,11 @@ d000633a5681: Layer already exists
 fc02: digest: sha256:f7f0ad0c1d962c444fbdc9d0cf22a06f9e457006c02103983169ca001ba0f56d size: 1777
 ```
 
-### Deploy your customized nginx image
+</details>
+
+<details>
+<summary>Deploy and test</summary>
+ 
 
 Using two manifests .yaml files we have in the current directory, we deploy the new image, and we expose it using a LoadBalancer service. 
 
@@ -539,12 +670,21 @@ You should see "our" greeting:
 
                     "*Hello from FCTFOKE Nginx container*"
                     
+                    
+                    </details>
+
+ 
 
 ## Horizontal Pod Autoscaler
 
 The OKE cluster has been generated by Terraform with *metrics-server* enabled, which enables the Horizontal Pod Autoscaler capabilities.
 
-To check that the metrcs-server is active, type the following command.
+ 
+
+<details>
+<summary>Check metrics-server</summary>
+
+To check that the metrics-server is active, type the following command.
 
 ```
 kubectl get --raw "/apis/metrics.k8s.io/v1beta1/nodes"
@@ -635,6 +775,11 @@ Indenting for better readability, should be something like the following.
 }
 ```
 
+</details>
+
+<details>
+<summary>Deploy a php-apache server image</summary>
+
 Horizontal Pod Autoscaler can automatically scale the number of Pods in a replication controller, deployment, replica set or stateful set based on observed CPU utilization (or, with beta support in apiVersion: autoscaling/v2beta2, on some other application-provided metrics).
 
 What follows is an example of enabling Horizontal Pod Autoscaler for the php-apache server [see https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/] using a custom docker image based on the php-apache image, with an index.php page which performs some CPU intensive computations.
@@ -648,6 +793,11 @@ service/php-apache created
 ```
 
 Now that the php-server server is running, we will create the autoscaler using the "kubectl autoscale" command. We could also apply a manifest file.
+
+</details>
+
+<details>
+<summary>Scaling with HPA</summary>
 
 The following command will create a Horizontal Pod Autoscaler that maintains between 1 and 10 replicas of the Pods controlled by the php-apache deployment.
 Roughly speaking, HPA will increase and decrease the number of replicas (via the deployment) to maintain an average CPU utilization across all Pods of 50%.
@@ -698,7 +848,17 @@ Finish the example by stopping the user load, by typing  Ctrl-C.
 
 Then we can verify the result state (after few minutes, be patient), and check that the number of replicas is back to 1.
 
+</details>
+
+ 
+
 ## Ingress Controller installation and sample deployment
+
+We will now install an Ingress Controller in our cluster.
+Then we will deploy some resources to test with some external traffic.
+
+<details>
+<summary>Components</summary>
 
 The ingress controller test installation comprises:
 
@@ -715,7 +875,12 @@ The hello-world backend test deployment comprises:
 - A backend deployment called docker-hello-world. This is done by using a stock hello-world image that serves the minimum required routes for a default backend.
 - A backend service called docker-hello-world-svc.The service exposes the backend deployment for consumption by the ingress controller deployment.
 
-### Setting up the NGINX Ingress Controller
+ 
+
+</details>
+
+<details>
+<summary>Nginx Ingress Controller setup</summary>
 
 If you are working on the oparator VM, your KUBECONFIG should be ok.
 
@@ -760,7 +925,11 @@ Verify that the ingress-nginx Ingress Controller Service is Running as a Load Ba
 
 The output from the above command shows the EXTERNAL-IP for the ingress-nginx Service. Make note of the EXTERNAL-IP
 
-### Creating a TLS Secret.
+</details>
+
+<details>
+<summary>Creating a TLS secret</summary>
+ 
 
 A TLS secret is used for SSL termination on the ingress controller. Output a new key to a file. For example, by entering:
 
@@ -770,7 +939,12 @@ Create the TLS secret by entering:
 
       kubectl create secret tls tls-secret --key tls.key --cert tls.crt
 
-### Setting Up the Example Backend
+
+</details>
+
+<details>
+<summary>Setting up the backend</summary>
+
 
 In this section, you define a hello-world backend service and deployment.
 Create the new hello-world deployment and service on nodes in the cluster by running the following command:
@@ -792,8 +966,11 @@ Use the external IP address of the ingress-nginx service (for example, 129.146.2
 
       curl --trace -  http://<EXTERNALIP>
 
-One more Ingress example
-------------------------
+</details>
+
+<details>
+<summary>One more Ingress example</summary>
+
 
 (from https://kubernetes.io/docs/tasks/access-application-cluster/ingress-minikube/ )
 
@@ -820,6 +997,11 @@ Check the / path still works (Hello webhook world)
 Use the external IP address of the ingress-nginx service (for example, 129.146.214.219) to open a browser, or otherwise curl an http request by entering:
 
       curl --trace -  http://<EXTERNALIP>
+      
+  
+</details>
+
+ 
 
 Set up Web Application Firewall (WAF)
 -------------------------------
@@ -828,9 +1010,18 @@ Set up Web Application Firewall (WAF)
 
 Before creating the WAF policy, you need to know the public IP address EXTERNALIP of the load balancer already been deployed for your Ingress resource (see above).
 
-<u>Note: The load balancer has been created in the designated "xxx-pub-lb" public subnet.  Since we set "*waf_enabled=true*" at provisioning time, traffic to all public load balancer must go through WAF. This is accomplished setting the appropriate Ingress Rules for the subnet. You can see them in the OCI Console, they have a Description like "allow public ingress only from WAF CIDR blocks".</u>
+<details>
+<summary>Warning!</summary>
 
-To secure your application using WAF, first, you need to create a WAF policy.
+The load balancers so far have been created in the designated "\<env\>-pub-lb" public subnet.  
+If you requested the OKE cluster to be "*waf_enabled=true*" at provisioning time, traffic to all public load balancer must go through WAF. This is accomplished setting the appropriate Ingress Rules for the subnet. You can see them in the OCI Console, they have a Description like "allow public ingress only from WAF CIDR blocks".
+
+</details>
+
+<details>
+<summary>Setting up WAF</summary>
+
+To enable incoming traffic thru WAF, first you need to create a WAF policy.
 
 In to the Oracle Cloud Infrastructure console, go to Security and click WAF Policies.
 If prompted, pick a compartment where the WAF policy should be created.
@@ -904,6 +1095,8 @@ Try to access your CNAME host
 
 You shuold be prompted with a CAPTCHA, which means the WAF is active. 
 
+</details>
+
 ## Network Policies with Calico
 
 Clusters you create with Container Engine for Kubernetes have *flannel* installed as the default CNI network provider.
@@ -911,6 +1104,11 @@ Clusters you create with Container Engine for Kubernetes have *flannel* installe
 Although flannel satisfies the requirements of the Kubernetes networking model, it does not support NetworkPolicy resources.
 
 If you want to enhance the security of clusters you create with Container Engine for Kubernetes by implementing network policies, you have to install and configure a network provider that does support NetworkPolicy resources. One such provider is *Calico*.
+
+
+<details>
+   <summary>Network Policy definitions </summary>
+
 
 Network policies lets developers secure access to and from their applications using the same simple language they use to deploy them. Developers can focus on their applications without diving into low-level networking concepts.
 
@@ -929,7 +1127,10 @@ If no Kubernetes network policies apply to a pod, then all traffic to/from the p
 
 If one or more Kubernetes network policies apply to a pod, then only the traffic specifically defined in that network policy are allowed (<u>default-deny</u>).
 
-### Running the *stars* example
+</details>
+
+<details>
+   <summary>Running the stars example</summary>
 
 Since this example has been designed and tested for a single-node cluster, pause now all your k8s worker nodes (but one), using the commands:
 
@@ -1062,13 +1263,17 @@ You can clean up by deleting all namespaces.
 
 `kubectl delete ns client stars management-ui`
 
+</details>
+
 ## Istio quick tour: setup and sample configuration
 
 In this section we install Istio in the OKE cluster and we take it for a quick spin, testing same sample deployments and configurations.
 
-We don't provide an introduction to Istio, its features and capabilities, which are just marginally covered here, the objective being just a quick test of Istio on OKE.
+We don't provide an introduction to Istio, its features and capabilities.
+The objective here is just a quick setup and test of Istio on OKE.
 
-### Istio installation
+<details>
+   <summary>Istio Installation</summary>
 
 Download and extract the latest Istio release automatically (Linux or macOS):
 
@@ -1150,8 +1355,13 @@ kubectl label namespace default istio-injection=enabled
 
 namespace/default labeled
 ```
+</details>
 
-### Deploy the Bookinfo sample application
+
+<details>
+   <summary>Deploy the Bookinfo sample application</summary>
+
+
 
 ```
 kubectl apply -f samples/bookinfo/platform/kube/bookinfo.yaml
@@ -1332,7 +1542,13 @@ http://152.70.183.175:80/productpage
 
 Paste the output from the previous command into your web browser and confirm that the Bookinfo product page is displayed.
 
-### Install addon tools/frameworks: Kiali dashboard, along with Prometheus, Grafana, and Jaeger.
+</details>
+
+<details>
+   <summary>View Kialy Dashboard</summary>
+
+
+Install addon tools/frameworks: Kiali dashboard, along with Prometheus, Grafana, and Jaeger
 
 ```
 kubectl apply -f samples/addons
@@ -1373,7 +1589,12 @@ The Kiali dashboard shows an overview of your mesh with the relationships betwee
 
 Hit ctrl-C in your terminal to close the dashboard
 
-### Request Routing with Istio
+</details>
+
+
+<details>
+   <summary>Request Routing with Istio</summary>
+
 
 Retrieve the BookInfo url used before, and open in an external browser
 
@@ -1438,9 +1659,17 @@ When you’re finished experimenting with the Bookinfo sample, uninstall and cle
 
 To confirm [default] namespace hit enter.
 
-## Provision component/layer 200 CORE
+</details> 
 
-These are the steps to create the second layer, with a different VCN, Local Peering Gateway with the first layer, and its own OKE cluster
+
+## Provisioning a second layer 
+
+These are the steps to create the second layer in our OCI Architecture, in a different VCN (with Local Peering enabled with the first layer VCN), and with its own OKE cluster
+
+
+<details>
+   <summary>Instructions</summary>
+ 
 
 ```
 cd REPO-ROOT
@@ -1471,16 +1700,27 @@ tplan
 tapply
 ```
 
-## Clean up
+
+</details>
+   
+
+## Clean-up
+We now can deprovision all the resources
 
 <details>
-   <summary>Click to expand!</summary>
+   <summary>Warning</summary>
 
   PLEASE DESTROY IN REVERSE ORDER
 
 1. 200-core
 
 2. 100-fr 
+
+</details>
+
+<details>
+   <summary>Clean-up steps</summary>
+   
    
    The steps to clean up are:
    
